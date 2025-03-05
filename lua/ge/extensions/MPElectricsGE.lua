@@ -52,7 +52,7 @@ local function applyElectrics(data, serverVehicleID)
 	local veh = be:getObjectByID(gameVehicleID)
 	if veh then
 		if not MPVehicleGE.isOwn(gameVehicleID) then
-			veh:queueLuaCommand("MPElectricsVE.applyElectrics(\'"..data.."\')")
+			veh:queueLuaCommand("MPElectricsVE.applyElectrics(mime.unb64(\'".. MPHelpers.b64encode(data) .."\'))")
 		end
 	end
 end
@@ -63,6 +63,12 @@ end
 local function handle(rawData)
 	--print("MPElectricsGE.handle: "..rawData)
 	local code, serverVehicleID, data = string.match(rawData, "^(%a)%:(%d+%-%d+)%:({.*})")
+
+	local veh = MPVehicleGE.getVehicles()[serverVehicleID]
+
+	if not veh or veh.isLocal then
+		return
+	end
 
 	if code == "e" then -- Electrics (indicators, lights etc...)
 		applyElectrics(data, serverVehicleID)

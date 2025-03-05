@@ -46,7 +46,7 @@ local function applyInputs(data, serverVehicleID)
 	local gameVehicleID = MPVehicleGE.getGameVehicleID(serverVehicleID) or -1 -- get gameID
 	local veh = be:getObjectByID(gameVehicleID)
 	if veh then
-		veh:queueLuaCommand("MPInputsVE.applyInputs(\'"..data.."\')")
+		veh:queueLuaCommand("MPInputsVE.applyInputs(mime.unb64(\'".. MPHelpers.b64encode(data) .."\'))")
 	end
 end
 
@@ -55,6 +55,13 @@ end
 -- @param rawData string The raw message data.
 local function handle(rawData)
 	local code, serverVehicleID, data = string.match(rawData, "^(%a)%:(%d+%-%d+)%:({.*})")
+	
+	local veh = MPVehicleGE.getVehicles()[serverVehicleID]
+
+	if not veh or veh.isLocal then
+		return
+	end
+
 	if code == 'i' then
 		applyInputs(data, serverVehicleID)
 	else

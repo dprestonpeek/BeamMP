@@ -11,8 +11,6 @@
 
 local M = {}
 
-local jbeamIO = require('jbeam/io') -- to be used later for getting slotting information of parts
-
 setmetatable(_G,{}) -- temporarily disable global notifications
 
 -- ============= VARIABLES =============
@@ -41,20 +39,24 @@ local original_spawnDefault
 -- @tfield roleToInfo_subtable RoleName_N ..
 -- @usage local roleInfo = roleToInfo["USER"]
 local roleToInfo = {
-	['USER']	= { backcolor = ColorI(000, 000, 000, 127), forecolor = ColorI(255, 255, 255, 127), tag = "", shorttag = "" },
-	['EA']		= { backcolor = ColorI(069, 000, 150, 127), forecolor = ColorI(193, 139, 255, 255), tag = " [Early Access]", shorttag = " [EA]" },
-	['CONT']	= { backcolor = ColorI(069, 000, 150, 127), forecolor = ColorI(193, 139, 255, 255), tag = " [Contributor]", shorttag = " [CO]" },
-	['YT']		= { backcolor = ColorI(200, 000, 000, 127), forecolor = ColorI(255, 000, 000, 127), tag = " [Content Creator]", shorttag = " [CC]" },
-	['ET']		= { backcolor = ColorI(210, 214, 109, 127), forecolor = ColorI(210, 214, 109, 127), tag = " [Events Team]", shorttag = " [Events]" },
-	['SUPPORT']	= { backcolor = ColorI(068, 109, 184, 127), forecolor = ColorI(99, 154, 255, 127), tag = " [Support]", shorttag = " [Staff]" },
-	['STAFF']	= { backcolor = ColorI(068, 109, 184, 127), forecolor = ColorI(99, 154, 255, 127), tag = " [BeamMP Staff]", shorttag = " [Staff]" },
-	['MOD']		= { backcolor = ColorI(068, 109, 184, 127), forecolor = ColorI(99, 154, 255, 127), tag = " [Moderator]", shorttag = " [Mod]" },
-	['ADM']		= { backcolor = ColorI(218, 000, 078, 127), forecolor = ColorI(255, 000, 089, 127), tag = " [Admin]", shorttag = " [Adm]" },
-	['MDEV']	= { backcolor = ColorI(194, 055, 055, 127), forecolor = ColorI(255, 070, 101, 127), tag = " [BeamMP Dev]", shorttag = " [Dev]" },
-	['NGDEV']	= { backcolor = ColorI(252, 107, 003, 127), forecolor = ColorI(252, 107, 003, 127), tag = " [BeamNG Developer]", shorttag = " [BNG]" },
-	['NGSTAFF']	= { backcolor = ColorI(252, 107, 003, 127), forecolor = ColorI(252, 107, 003, 127), tag = " [BeamNG Staff]", shorttag = " [BNG]" },
-	['NGAFFIL']	= { backcolor = ColorI(252, 107, 003, 127), forecolor = ColorI(252, 107, 003, 127), tag = " [BeamNG Affiliate]", shorttag = " [BNG]" }
+	['USER']	= { backcolor = { r = 000, g = 000, b = 000 }, forecolor = { r = 255, g = 255, b = 255 }, tag = "", shorttag = "" },
+	['EA']		= { backcolor = { r = 069, g = 000, b = 150 }, forecolor = { r = 193, g = 139, b = 255 }, tag = " [Early Access]", shorttag = " [EA]" },
+	['CONT']	= { backcolor = { r = 069, g = 000, b = 150 }, forecolor = { r = 193, g = 139, b = 255 }, tag = " [Contributor]", shorttag = " [CO]" },
+	['YT']		= { backcolor = { r = 200, g = 000, b = 000 }, forecolor = { r = 255, g = 000, b = 000 }, tag = " [Content Creator]", shorttag = " [CC]" },
+	['ET']		= { backcolor = { r = 210, g = 214, b = 109 }, forecolor = { r = 210, g = 214, b = 109 }, tag = " [Events Team]", shorttag = " [Events]" },
+	['SUPPORT']	= { backcolor = { r = 068, g = 109, b = 184 }, forecolor = { r = 099, g = 154, b = 255 }, tag = " [Support]", shorttag = " [Staff]" },
+	['STAFF']	= { backcolor = { r = 068, g = 109, b = 184 }, forecolor = { r = 099, g = 154, b = 255 }, tag = " [BeamMP Staff]", shorttag = " [Staff]" },
+	['MOD']		= { backcolor = { r = 068, g = 109, b = 184 }, forecolor = { r = 099, g = 154, b = 255 }, tag = " [Moderator]", shorttag = " [Mod]" },
+	['ADM']		= { backcolor = { r = 218, g = 000, b = 078 }, forecolor = { r = 255, g = 000, b = 089 }, tag = " [Admin]", shorttag = " [Adm]" },
+	['MDEV']	= { backcolor = { r = 194, g = 055, b = 055 }, forecolor = { r = 255, g = 070, b = 101 }, tag = " [BeamMP Dev]", shorttag = " [Dev]" },
+	['NGDEV']	= { backcolor = { r = 252, g = 107, b = 003 }, forecolor = { r = 252, g = 107, b = 003 }, tag = " [BeamNG Developer]", shorttag = " [BNG]" },
+	['NGSTAFF']	= { backcolor = { r = 252, g = 107, b = 003 }, forecolor = { r = 252, g = 107, b = 003 }, tag = " [BeamNG Staff]", shorttag = " [BNG]" },
+	['NGAFFIL']	= { backcolor = { r = 252, g = 107, b = 003 }, forecolor = { r = 252, g = 107, b = 003 }, tag = " [BeamNG Affiliate]", shorttag = " [BNG]" }
 }
+
+local function getRoleInfoTable()
+	return roleToInfo
+end
 
 --- (in table) Specifies the table in roleToInfo
 -- @table roleToInfo_subtable
@@ -64,75 +66,9 @@ local roleToInfo = {
 -- @usage local roleInfo = roleToInfo["USER"].tag
 -- @usage local roleInfo = roleToInfo["USER"].backcolor.r
 
---- Contains the known simplified Vehicle versions.
--- JBeamNames are Strings eg. "moonhawk", "unicycle"
--- @table simplified_vehicles
--- @tfield string JBeamName_1 eg. "simple_traffic_body_5door_wagon"
--- @tfield string JBeamName_N
--- @usage local simplified = simplified_vehicles["coupe"]
-local simplified_vehicles = {
-	atv         = "simple_traffic_atv",
-	autobello   = "simple_traffic_autobello",
-	barstow     = "simple_traffic_body_2door_coupe",
-	bastion     = "simple_traffic_body_4door_sedan",
-	bluebuck    = "simple_traffic_body_4door_sedan",
-	bolide      = "simple_traffic_bolide",
-	burnside    = "simple_traffic_body_4door_sedan",
-	bx          = "simple_traffic_body_2door_coupe",
-	citybus     = "simple_traffic_citybus",
-	covet       = "simple_traffic_body_3door_hatch",
-	etk800      = "simple_traffic_body_5door_wagon",
-	etkc        = "simple_traffic_body_2door_coupe",
-	etki        = "simple_traffic_body_4door_sedan",
-	fullsize    = "simple_traffic_body_4door_sedan", -- THIS DOES NOT WORK, IT SHOULD REPLACE THE FRAME SLOT BUT WE ONLY DOING BODY SLOT RIGHT NOW
-	hopper      = "simple_traffic_hopper",
-	lansdale    = "simple_traffic_body_5door_wagon",
-	legran      = "simple_traffic_body_4door_sedan",
-	midsize     = "simple_traffic_body_4door_sedan",
-	midtruck    = "simple_traffic_midtruck",
-	miramar     = "simple_traffic_body_4door_sedan",
-	moonhawk    = "simple_traffic_body_2door_coupe",
-	pessima     = "simple_traffic_body_4door_sedan",
-	pickup      = "simple_traffic_body_d10", -- THIS DOES NOT WORK, IT SHOULD REPLACE THE FRAME SLOT BUT WE ONLY DOING BODY SLOT RIGHT NOW
-	pigeon      = "simple_traffic_pigeon",
-	racetruck   = "simple_traffic_racetruck",
-	roamer      = "simple_traffic_body_5door_wagon", -- THIS DOES NOT WORK, IT SHOULD REPLACE THE FRAME SLOT BUT WE ONLY DOING BODY SLOT RIGHT NOW
-	rockbouncer = "simple_traffic_rockbouncer",
-	sbr         = "simple_traffic_body_2door_coupe",
-	scintilla   = "simple_traffic_scintilla",
-	sunburst    = "simple_traffic_body_4door_sedan",
-	us_semi     = "simple_traffic_us_semi",
-	utv         = "simple_traffic_utv",
-	van         = "simple_traffic_body_6door_van", -- THIS DOES NOT WORK, IT SHOULD REPLACE THE FRAME SLOT BUT WE ONLY DOING BODY SLOT RIGHT NOW
-	vivace      = "simple_traffic_vivace", -- why are you always the weird one
-	wendover    = "simple_traffic_body_2door_coupe",
-	wigeon      = "simple_traffic_wigeon"
-}
-
 local settingsCache = {
 }
 -- ============= VARIABLES =============
-
---- Contains the Custom Roles created with createRole
--- @table custom_roleToInfo
--- @tfield roleToInfo_subtable RoleName_1 Contains the Role Specific Data
--- @tfield roleToInfo_subtable RoleName_N ..
--- @usage local roleInfo = custom_roleToInfo["CUSTOMROLE"]
-local custom_roleToInfo = {}
-
-
---- Contains only the Vehicles that have set Custom roles to it with setVehicleRole
--- @table custom_vehicleRoles
--- @tfield custom_vehicleRoles_subtable serverVehicleID_1 Contains Role and DisplayName of that Vehicle
--- @tfield custom_vehicleRoles_subtable serverVehicleID_N ..
--- @usage local roleInfo = custom_vehicleRoles["0-0"]
-local custom_vehicleRoles = {}
-
---- (in table) Specifies the table in custom_vehicleRoles
--- @table custom_vehicleRoles_subtable
--- @tfield string Role Contains the RoleName for this Vehicle
--- @tfield string DisplayName Contains the custom Displayname for this Vehicle
--- @usage local displayName = custom_roleToInfo["0-0"].DisplayName
 
 --- Contains all known Players.
 -- PlayerID's are integers starting at 0
@@ -433,96 +369,83 @@ function getPlayers() return players end
 -- @usage local vehicles = getVehicles()
 function getVehicles() return vehicles end
 
---- Sets a custom role and name to a vehicle
--- @tparam string playerIDVehicleID X-Y. Where X is the PlayerID and Y the Players VehicleID
--- @tparam string roleName The name of the Custom Role. Setting this to "BLANK" will make the player tag invinsible
--- @tparam[opt] string displayName sets a Custom name to this Vehicle. Give 0 to not set a custom name
--- @treturn[1] 1 If success
--- @treturn[2] 0 playerIDVehicleID is invalid. Vehicle or Player might not exists
--- @treturn[3] -1 roleName does not exist
--- @usage setVehicleRole("0-0", "MYROLE", "Unknown")
-function setVehicleRole(playerIDVehicleID, roleName, displayName)
-	if vehicles[playerIDVehicleID] == nil then return 0 end
-	roleName = string.upper(roleName)
-	if roleName ~= "BLANK" then
-		if custom_roleToInfo[roleName] == nil then return -1 end
+local function createRoleHelper(tag, shorttag, red, green, blue)
+	if type(red) ~= "number" then return nil, "invalid red channel data" end
+	if type(green) ~= "number" then return nil, "invalid green channel data" end
+	if type(blue) ~= "number" then return nil, "invalid blue channel data" end
+
+	local contents = { backcolor = { r = clamp(red, 0, 255), g = clamp(green, 0, 255), b = clamp(blue, 0, 255)}, tag = "", shorttag = "" }
+	if type(tag) == "string" then
+		contents.tag = " [" .. tag .. "]"
 	end
-	
-	if displayName == 0 then
-		local playerName = players[vehicles[playerIDVehicleID].ownerID].name
-		displayName = playerName
-	else
-		displayName = "*" .. displayName
+
+	if type(shorttag) == "string" then
+		contents.shorttag = " [" .. shorttag .. "]"
 	end
-	
-	local contents = {}
-	contents["Role"] = roleName
-	contents["DisplayName"] = displayName
-	custom_vehicleRoles[playerIDVehicleID] = contents
-	return 1
+
+	return contents
 end
 
---- Removes a custom Role and Name from a Vehicle
--- @tparam string playerIDVehicleID X-Y. Where X is the PlayerID and Y the Players VehicleID
--- @treturn nil
--- @usage removeVehicleRole("0-0")
-function removeVehicleRole(playerIDVehicleID)
-	custom_vehicleRoles[playerIDVehicleID] = nil
+--- Sets a custom role for a player
+-- @tparam int playerID ID of the player
+-- @tparam string tag normal version of the role tag
+-- @tparam string shorttag shortened version of the role tag
+-- @tparam int red red channel of the role's color
+-- @tparam int green green channel of the role's color
+-- @tparam int blue blue channel of the role's color
+-- @treturn bool true in case of success, false in case of error
+-- @treturn nil, string error message
+-- @usage local success, error = setPlayerRole(0, "Example", "EX", 0, 127, 255)
+function setPlayerRole(playerID, ...)
+	local p = players[playerID]
+	if not p then return false, "player not found" end
+
+	local role, err = createRoleHelper(...)
+	if not role then
+		log('E', 'setPlayerRole', 'Function called with invalid arguments: ' .. tostring(err))
+		return false, err
+	end
+
+	p:setCustomRole(role)
 end
 
---- Creates a custom role to be used with setVehicleRole.
--- Give 0 to not use a Optional param.
--- @tparam string roleName Name of the Role
--- @tparam[opt] string tag Sets a optional tag. Playername [Long tag]
--- @tparam[opt] string shorttag Sets a optional shorttag: Playername [Short Tag]
--- @tparam[opt] integer red 0 to 255
--- @tparam[opt] integer green 0 to 255
--- @tparam[opt] integer blue 0 to 255
--- @treturn[1] true If success
--- @treturn[2] false When a color value is below 0 or when the roleName == "BLANK"
--- @usage createRole("MYROLE", "Custom", "Ctm", 252, 107, 3)
-function createRole(roleName, tag, shorttag, red, green, blue)
-	if red < 0 then return false end
-	if green < 0 then return false end
-	if blue < 0 then return false end
-	
-	roleName = string.upper(roleName)
-	if roleName == "BLANK" then return false end
-	
-	local contents = {}
-	contents["backcolor"] = ColorI(red, green, blue, 127)
-	if tag == 0 then
-		contents["tag"] = ""
-	else
-		contents["tag"] = " [*" .. tag .. "]"
-	end
-	if shortag == 0 then
-		contents["shorttag"] = ""
-	else
-		contents["shorttag"] = " [*" .. shorttag .. "]"
-	end
-	custom_roleToInfo[roleName] = contents
-	return true
+--- Clears a custom role for a player
+-- @tparam int playerID ID of the player
+-- @treturn bool true in case of success, false in case of error
+-- @usage local success, error = clearPlayerRole(0)
+function clearPlayerRole(playerID)
+	return players[playerID] and players[playerID]:clearCustomRole() or false
 end
 
---- Removes a custom role.
--- All vehicles with that role will also loose it.
--- @tparam string roleName
--- @treturn true If success
--- @treturn false When the Role doesnt exists
--- @usage removeRole("MYROLE")
-function removeRole(roleName)
-	roleName = string.upper(roleName)
-	if custom_roleToInfo[roleName] == nil then return false end
-	
-	for playerIDVehicleID, data in pairs(custom_vehicleRoles) do
-		if data.Role == roleName then
-			custom_vehicleRoles[playerIDVehicleID] = nil
-		end
+--- Sets a custom role for a vehicle
+-- @tparam string playerIDVehicleID ID of the vehicle
+-- @tparam string tag normal version of the role tag
+-- @tparam string shorttag shortened version of the role tag
+-- @tparam int red red channel of the role's color
+-- @tparam int green green channel of the role's color
+-- @tparam int blue blue channel of the role's color
+-- @treturn bool true in case of success, false in case of error
+-- @treturn nil, string error message
+-- @usage local success, error = setVehicleRole("0-0", "Example", "EX", 0, 127, 255)
+function setVehicleRole(playerIDVehicleID, ...)
+	local v = vehicles[playerIDVehicleID]
+	if not v then return false, "vehicle not found" end
+
+	local role, err = createRoleHelper(...)
+	if not role then
+		log('E', 'setVehicleRole', 'Function called with invalid arguments: ' .. tostring(err))
+		return false, err
 	end
-	
-	custom_roleToInfo[roleName] = nil
-	return true
+
+	v:setCustomRole(role)
+end
+
+--- Clears a custom role for a vehicle
+-- @tparam string playerIDVehicleID ID of the vehicle
+-- @treturn bool true in case of success, false in case of error
+-- @usage local success, error = clearVehicleRole("0-0")
+function clearVehicleRole(playerIDVehicleID)
+	return vehicles[playerIDVehicleID] and vehicles[playerIDVehicleID]:clearCustomRole() or false
 end
 
 -- ============== INTERNAL FUNCTIONS ==============
@@ -544,152 +467,408 @@ local function localVehiclesExist()
 end
 
 local vehicleSimplifiers = {
-	-- complicated chaos, just looking at this put me in tears
+	-- notes before diving into this shit hole
+	-- depending on the slot, parts.my_hopefully_exist_slot can be nil, breaking string.find(parts.my_hopefully_exist_slot, "_suffix")
 
-	bastion = function(vehicleParts) -- case 1, simple body replace
-		vehicleParts["bastion_body"] = "simple_traffic_body_4door_sedan"
-	end,
-	bx = function(vehicleParts) -- case 2, correspond with what body is used -- nvm this is minor chaos
-		vehicleParts["bx_body"] = "simple_traffic_body_2door_coupe"
-		if vehicleParts["bx_body"] == "bx_body_coupe" then
-			--vehicleParts["simple_traffic_bodystyle"] = "simple_traffic_bodystyle_coupe" -- is default already
-		else
-			if vehicleParts["bx_fenderflare_RR"] == "bx_fenderflare_RR" and vehicleParts["bx_fenderflare_RL"] == "bx_fenderflare_RL"
-			and ((vehicleParts["bx_fenderflare_FR_popup"] == "bx_fenderflare_FR_popup" and vehicleParts["bx_fenderflare_FL_popup"] == "bx_fenderflare_FL_popup")
-			or (vehicleParts["bx_fenderflare_FR_fixed"] == "bx_fenderflare_FR_fixed" and vehicleParts["bx_fenderflare_FL_fixed"] == "bx_fenderflare_FL_fixed")) then
-				vehicleParts["bx_body"] = "simple_traffic_body_2door_coupe_tuner" -- this gives widebody fenderflare bodystyle
-			else
-				vehicleParts["simple_traffic_bodystyle"] = "simple_traffic_bodystyle_hatch"
-			end
-		end
-	end,
-	covet = function(vehicleParts)
-		vehicleParts["covet_body"] = "simple_traffic_body_3door_hatch"
-	end,
-	etk800 = function(vehicleParts)
-		if vehicleParts["etk800_body"] == "etk800_body_sedan" then
-			vehicleParts["etk800_body"] = "simple_traffic_body_4door_sedan"
-		else
-			vehicleParts["etk800_body"] = "simple_traffic_body_5door_wagon"
-		end
-	end,
-	etkc = function(vehicleParts)
-		vehicleParts["etkc_body"] = "simple_traffic_body_2door_coupe"
-	end,
-	etki = function(vehicleParts)
-		vehicleParts["etki_body"] = "simple_traffic_body_4door_sedan"
-	end,
-	fullsize = function(vehicleParts) -- case 1.5, frame replace
-		vehicleParts["fullsize_frame"] = "simple_traffic_body_4door_sedan"
-	end,
-	lansdale = function(vehicleParts) -- case 3, something thats not the body decides what body is used
-		if vehicleParts["lansdale_radsupport"] == "lansdale_radsupport_late" then
-			vehicleParts["lansdale_body"] = "simple_traffic_body_5door_wagon_facelift"
-		else
-			vehicleParts["lansdale_body"] = "simple_traffic_body_5door_wagon"
-		end
-	end,
-	legran = function(vehicleParts)
-		if vehicleParts["legran_body"] == "legran_body_wagon" then
-			vehicleParts["legran_body"] = "simple_traffic_body_5door_wagon"
-		else
-			vehicleParts["legran_body"] = "simple_traffic_body_4door_sedan"
-		end
-	end,
-	midsize = function(vehicleParts)
-		vehicleParts["midsize_body"] = "simple_traffic_body_4door_sedan"
-	end,
-	pessima = function(vehicleParts)
-		vehicleParts["pessima_body"] = "simple_traffic_body_4door_sedan"
-	end,
-	pickup = function(vehicleParts) -- case 4, chaos D:
-		if vehicleParts["pickup_frame"] == "pickup_frame_upfit_heavy" then
-			vehicleParts["pickup_frame"] = "simple_traffic_body_d45" -- boxtruck
-
-		elseif string.match(vehicleParts["pickup_frame"], "pickup_frame_crewlongbed") or -- ingores heavy suffix for crew cabin frames
-		string.match(vehicleParts["pickup_frame"], "pickup_frame_extlongbed") then -- ingores heavy for ext cabin longbed frames
-			vehicleParts["pickup_frame"] = "simple_traffic_body_d25" -- ext cab long bed
-
-		elseif string.match(vehicleParts["pickup_frame"], "pickup_frame_crew") or -- ingores heavy for (the rest of) crew cabin frames
-		string.match(vehicleParts["pickup_frame"], "pickup_frame_ext") or -- ingores heavy for (the rest of) ext cabin frames
-		string.match(vehicleParts["pickup_frame"], "pickup_frame_longbed") or -- ingores heavy for longbed frames
-		vehicleParts["pickup_frame"] == "pickup_desert_frame_crew" or
-		vehicleParts["pickup_frame"] == "pickup_desert_frame_ext" or
-		string.match(vehicleParts["pickup_frame"], "pickup_frame_short_ext") then -- ingores heavy for short ext frames
-			vehicleParts["pickup_frame"] = "simple_traffic_body_d15" -- crew cab normal bed
-
-		else -- standard frame, offroad frame, short frame lands here
-			vehicleParts["pickup_frame"] = "simple_traffic_body_d10" -- short frame
-		end
+	common = function(vehicleConfig) -- this currently exist to fix wheels (TRIES TO) because simplified traffic have no (broken) default wheel
+		local parts = vehicleConfig.parts
 		
-	end,
-	roamer = function(vehicleParts)
-		vehicleParts["roamer_frame"] = "simple_traffic_body_5door_wagon"
-	end,
-	sunburst = function(vehicleParts)
-		vehicleParts["sunburst_body"] = "simple_traffic_body_4door_sedan"
-	end,
-	van = function(vehicleParts) -- case 5 mltiple deciding factors
-		if vehicleParts["van_frame"] == "van_frame_upfit_heavy" then
-			vehicleParts["van_frame"] = "simple_traffic_body_2door_boxtruck"
-		elseif string.match(vehicleParts["van_frame"], "van_frame_ext") then -- ingores heavy for frames
-			if vehicleParts["van_body_ext"] == "van_body_passenger_ext" then
-				vehicleParts["van_frame"] = "simple_traffic_body_6door_van_passenger"
-			else
-				vehicleParts["van_frame"] = "simple_traffic_body_6door_van_ext"
+		parts.simple_traffic_wheels_F = "simple_traffic_midsize_wheels_F_01a" -- absolute default
+		parts.simple_traffic_midsize_hubcaps_F = "" -- remove default hubcap
+		if parts.wheel_F_centerlug then
+		elseif parts.wheel_F_3 then -- USES 4 LUG DEFAULT
+			parts.simple_traffic_wheels_F = "simple_traffic_pessima_wheels_F_01a"
+			parts.simple_traffic_pessima_hubcaps_F = "" -- remove default hubcap
+		elseif parts.wheel_F_4 then
+			parts.simple_traffic_wheels_F = "simple_traffic_pessima_wheels_F_01a"
+			parts.simple_traffic_pessima_hubcaps_F = "" -- remove default hubcap
+		elseif parts.wheel_F_5 then
+		elseif parts.wheel_F_6 then
+			parts.simple_traffic_wheels_F = "simple_traffic_van_wheels_F_01a"
+		elseif parts.wheel_F_8 then -- USES 6 LUG DEFAULT
+			parts.simple_traffic_wheels_F = "simple_traffic_van_wheels_F_01a"
+		elseif parts.wheel_F_8_alt then
+			parts.simple_traffic_wheels_F = "simple_traffic_pickup_wheels_F_05a" -- corresponding wheel: steelwheel_04a_16x7_F
+			if parts.wheel_F_8_alt == "wheel_32a_16x7_F" then
+				parts.simple_traffic_wheels_F = "simple_traffic_pickup_wheels_F_04a"
 			end
-		else
-			vehicleParts["van_frame"] = "simple_traffic_body_6door_van"
 		end
-	end,
-	vivace = function(vehicleParts)
-		if string.match(vehicleParts["vivace_fueltank"], "vivace_battery") then
-			vehicleParts["vivace_body"] = "simple_traffic_vivace_e"
-		else
-			vehicleParts["vivace_body"] = "simple_traffic_vivace"
+
+		parts.simple_traffic_wheels_R = "simple_traffic_midsize_wheels_R_01a" -- absolute default， its one of the standard steel wheels ig
+		parts.simple_traffic_midsize_hubcaps_R = "" -- remove default hubcap
+		if parts.wheel_R_centerlug then
+		elseif parts.wheel_R_3 then -- USES 4 LUG DEFAULT
+			parts.simple_traffic_wheels_R = "simple_traffic_pessima_wheels_R_01a"
+			parts.simple_traffic_pessima_hubcaps_R = "" -- remove default hubcap
+		elseif parts.wheel_R_4 then
+			parts.simple_traffic_wheels_R = "simple_traffic_pessima_wheels_R_01a"
+			parts.simple_traffic_pessima_hubcaps_R = "" -- remove default hubcap
+		elseif parts.wheel_R_5 then
+		elseif parts.wheel_R_6 then
+			parts.simple_traffic_wheels_R = "simple_traffic_van_wheels_R_01a"
+		elseif parts.wheel_R_8 then -- USES 6 LUG DEFAULT
+			parts.simple_traffic_wheels_R = "simple_traffic_van_wheels_R_01a"
+		elseif parts.wheel_R_8_dually then
+			parts.simple_traffic_wheels_R = "simple_traffic_pickup_wheels_R_05a" -- corresponding wheel: steelwheel_04a_16x7_R_dually_true
+			if parts.wheel_R_8_alt == "wheel_32a_16x7_R_dually_true" then
+				parts.simple_traffic_wheels_R = "simple_traffic_pickup_wheels_R_04a"
+			end
 		end
+
 	end,
-	wendover = function(vehicleParts)
-		vehicleParts["wendover_body"] = "simple_traffic_body_2door_coupe"
+	bastion = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_bastion"
+		parts.simple_traffic_bastion_bumper_F = parts.bastion_bumper_F == "" and "" or nil
+		parts.simple_traffic_bastion_bumper_R = parts.bastion_bumper_R == "" and "" or nil
+		parts.simple_traffic_bastion_hood = parts.bastion_hood == "" and "" or nil
+		parts.simple_traffic_bastion_trunk = parts.bastion_trunk == "" and "" or nil
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
 	end,
-	-- is there a better way to implement this mess?
+	bx = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+		local isHatch = parts.bx_body == "bx_body_hatch"
+		parts.simple_traffic_model = "simple_traffic_bx_body"
+		parts.simple_traffic_bx_bumper_F = parts.bx_bumper_F == "" and "" or nil
+		parts.simple_traffic_bx_bumper_R = parts.bx_bumper_R == "" and "" or nil
+		parts.simple_traffic_bx_hood = parts.bx_hood == "" and "" or nil
+		parts.simple_traffic_bx_bodystyle = isHatch and "simple_traffic_bx_bodystyle_hatch" or nil
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	covet = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_covet_body"
+		parts.simple_traffic_covet_bumper_F = parts.covet_bumper_F == "" and "" or nil
+		parts.simple_traffic_covet_bumper_R = parts.covet_bumper_R == "" and "" or nil
+		parts.simple_traffic_covet_hood = parts.covet_hood == "" and "" or nil
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	etk800 = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+		local isWagon = parts.etk800_body == "etk800_body_wagon"
+		parts.simple_traffic_model = isWagon and "simple_traffic_etk800_wagon" or "simple_traffic_etk800_sedan"
+		parts.simple_traffic_etk800_bumper_F = parts.etk800_bumper_F == "" and "" or nil
+		parts.simple_traffic_etk800_bumper_R = parts.etk800_bumper_R == "" and "" or nil
+		parts.simple_traffic_etk800_hood = parts.etk800_hood == "" and "" or nil
+		if isWagon then
+		else
+			parts.simple_traffic_etk800_trunk = parts.etk800_trunk == "" and "" or nil
+		end
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	etkc = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_etkc_body"
+		parts.simple_traffic_etkc_bumper_F = parts.etkc_bumper_F == "" and "" or nil
+		parts.simple_traffic_etkc_bumper_R = parts.etkc_bumper_R == "" and "" or nil
+		parts.simple_traffic_etkc_hood = parts.etki_hood == "" and "" or nil
+		parts.simple_traffic_etkc_trunk = parts.etki_trunk == "" and "" or nil
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	etki = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_etki_body"
+		parts.simple_traffic_etki_bumper_F = parts.etki_bumper_F == "" and "" or nil
+		parts.simple_traffic_etki_bumper_R = parts.etki_bumper_R == "" and "" or nil
+		parts.simple_traffic_etki_hood = parts.etki_hood == "" and "" or nil
+		parts.simple_traffic_etki_trunk = parts.etki_trunk == "" and "" or nil
+		parts.skin_traffic_etki_lights = parts.skin_lights == "etki_skin_lights_alt" and "simple_traffic_etki_lights_facelift" or "simple_traffic_etki_lights_pre"
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	fullsize = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_fullsize_body"
+		parts.simple_traffic_fullsize_bumper_F = parts.fullsize_bumper_F == "" and "" or nil
+		parts.simple_traffic_fullsize_bumper_R = parts.fullsize_bumper_R == "" and "" or nil
+		parts.simple_traffic_fullsize_hood = parts.fullsize_hood == "" and "" or nil
+		parts.simple_traffic_fullsize_trunk = parts.fullsize_trunk == "" and "" or nil
+		parts.skin_traffic_fullsize = string.find(parts.paint_design or "", "taxi") and "simple_traffic_fullsize_skin_taxi" -- CANT be nil
+		parts.simple_traffic_fullsize_extra = parts.fullsize_roof_accessory == "fullsize_adcarrier" and "simple_traffic_fullsize_extra_taxi"
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	lansdale = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+		local isPre = parts.lansdale_radsupport == "lansdale_radsupport_early"
+		parts.simple_traffic_model = "simple_traffic_lansdale"
+		parts.simple_traffic_lansdale_bumper_F = parts.lansdale_bumper_F == "" and "" or nil
+		parts.simple_traffic_lansdale_bumper_R = parts.lansdale_bumper_R == "" and "" or nil
+		parts.simple_traffic_lansdale_hood = parts.lansdale_hood == "" and "" or nil
+		parts.simple_traffic_lansdale_extra = parts.lansdale_roof_accessory == "lansdale_adcarrier" and "simple_traffic_lansdale_extra_taxi"
+		if isPre then -- CANT be nil
+			parts.skin_traffic_lansdale_pre = string.find(parts.paint_design or "", "taxi") and "simple_traffic_lansdale_skin_taxi"
+		else
+		end
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	legran = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+		local isWagon = parts.legran_body == "legran_body_wagon"
+		local isLate = parts.legran_fascia == "legran_fascia_b"
+		parts.simple_traffic_model = isWagon and "simple_traffic_legran_body_wagon" or "simple_traffic_legran_body_sedan"
+		parts.simple_traffic_legran_bumper_F = parts.legran_bumper_F == "" and "" or nil
+		parts.simple_traffic_legran_bumper_R = parts.legran_bumper_R == "" and "" or nil
+		parts.simple_traffic_legran_hood = parts.legran_hood == "" and "" or nil
+		if isWagon then
+			parts.simple_traffic_legran_version_wagon = isLate and "simple_traffic_legran_wagon_facelift" or "simple_traffic_legran_wagon_pre"
+		else
+			parts.simple_traffic_legran_trunk = parts.legran_trunk == "" and "" or nil
+			parts.simple_traffic_legran_version_sedan = isLate and "simple_traffic_legran_sedan_facelift" or "simple_traffic_legran_sedan_pre"
+		end
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	midsize = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_midsize_body"
+		parts.simple_traffic_midsize_bumper_F = parts.midsize_bumper_F == "" and "" or nil
+		parts.simple_traffic_midsize_bumper_R = parts.midsize_bumper_R == "" and "" or nil
+		parts.simple_traffic_midsize_hood = parts.midsize_hood == "" and "" or nil
+		parts.simple_traffic_midsize_trunk = parts.midsize_trunk == "" and "" or nil
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	pessima = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_pessima"
+		parts.simple_traffic_pessima_bumper_F = parts.pessima_bumper_F == "" and "" or nil
+		parts.simple_traffic_pessima_bumper_R = parts.pessima_bumper_R == "" and "" or nil
+		parts.simple_traffic_pessima_hood = parts.pessima_hood == "" and "" or nil
+		parts.simple_traffic_pessima_trunk = parts.pessima_trunk == "" and "" or nil
+		parts.simple_traffic_pessima_trim = "simple_traffic_pessima_trim_stock" -- beamng skill issue, doesnt come with one by default, its core slot
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	pickup = function(vehicleConfig) -- case 4, chaos D:
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+		local isUpfit = parts.pickup_frame == "pickup_frame_upfit_heavy"
+		parts.simple_traffic_pickup_hood = parts.pickup_hood == "" and "" or nil
+
+		if isUpfit then
+			parts.simple_traffic_model = "simple_traffic_pickup_cargobox" -- boxtruck
+			parts.simple_traffic_pickup_bumper_F = parts.pickup_bumper_F == "" and "" or "simple_traffic_pickup_bumper_F" -- fix beamng skill issue
+
+		elseif parts.pickup_frame then -- CANT be nil
+			parts.simple_traffic_model = "simple_traffic_pickup_single" -- reg normal bed
+
+			if string.find(parts.pickup_frame, "pickup_frame_crewlongbed") or -- ingores heavy suffix for crew longbed frames
+			string.find(parts.pickup_frame, "pickup_frame_extlongbed") then -- ingores heavy for ext longbed frames
+				parts.simple_traffic_model = "simple_traffic_pickup_crew" -- crew long bed
+
+			elseif string.find(parts.pickup_frame, "pickup_frame_crew") or -- ingores heavy for (the rest of) crew frames
+			string.find(parts.pickup_frame, "pickup_frame_ext") or -- ingores heavy for (the rest of) ext frames
+			string.find(parts.pickup_frame, "pickup_frame_longbed") or -- ingores heavy for longbed frames
+			parts.pickup_frame == "pickup_desert_frame_crew" or
+			parts.pickup_frame == "pickup_desert_frame_ext" or
+			string.find(parts.pickup_frame, "pickup_frame_short_ext") then -- ingores heavy for short ext frames
+				parts.simple_traffic_model = "simple_traffic_pickup_ext" -- ext normal bed
+
+			elseif string.find(parts.pickup_frame, "pickup_frame_short") then -- ingores heavy suffix for short frames
+				parts.simple_traffic_model = "simple_traffic_pickup_short" -- short frame
+			
+			-- the default state has been moved above
+			--else -- standard frame, offroad frame lands here
+			--	parts.simple_traffic_model = "simple_traffic_pickup_single" -- reg normal bed
+			end
+		end
+
+		if not isUpfit then
+			parts.simple_traffic_pickup_bumper_F = parts.pickup_bumper_F == "" and "" or nil
+			parts.simple_traffic_pickup_bumper_R = parts.pickup_bumper_R == "" and "" or nil
+			if parts.pickup_fascia then -- can be nil
+				local version = string.find(parts.pickup_fascia, "pickup_fascia_prefacelift") and 1 or (string.find(parts.pickup_fascia, "pickup_fascia_facelift") and 3) or 2
+				if version == 1 then
+					parts.simple_traffic_pickup_version = not string.find(parts.pickup_fascia, "alt") and "simple_traffic_pickup_version_pre_chrome_alt" or "simple_traffic_pickup_version_pre_base"
+				elseif version == 2 then
+					parts.simple_traffic_pickup_version = "simple_traffic_pickup_version_pre_chrome"
+				elseif version == 3 then
+					parts.simple_traffic_pickup_version = not string.find(parts.pickup_fascia, "alt") and "simple_traffic_pickup_version_facelift_chrome" or "simple_traffic_pickup_version_facelift_base"
+				end
+			end
+		end
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	roamer = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+		local isExt = string.find(parts.roamer_frame or "", "roamer_frame_ext") ~= nil -- CANT be nil
+		local isLate = parts.roamer_radsupport == "roamer_radsupport_facelift"
+		parts.simple_traffic_model = isExt and "simple_traffic_roamer_ext" or "simple_traffic_roamer"
+		parts.simple_traffic_roamer_bumper_F = parts.roamer_bumper_F == "" and "" or nil
+		parts.simple_traffic_roamer_bumper_R = parts.roamer_bumper_R == "" and "" or nil
+		parts.simple_traffic_roamer_hood = parts.roamer_hood == "" and "" or nil
+		parts.simple_traffic_roamer_version = isLate and "simple_traffic_roamer_version_facelift" or "simple_traffic_roamer_version_pre"
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	sunburst = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_sunburst"
+		parts.simple_traffic_sunburst_bumper_F = parts.sunburst_bumper_F == "" and "" or nil
+		parts.simple_traffic_sunburst_bumper_R = parts.sunburst_bumper_R == "" and "" or nil
+		parts.simple_traffic_sunburst_hood = parts.sunburst_hood == "" and "" or nil
+		parts.simple_traffic_sunburst_trunk = parts.sunburst_trunk == "" and "" or nil
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	van = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+		local isUpfit = parts.van_frame == "van_frame_upfit_heavy"
+		local isLate = false
+		local isLux = false
+		if parts.van_facia_F then -- can be nil
+			isLate = string.find(parts.van_facia_F, "_late") ~= nil
+			isLux = string.find(parts.van_facia_F, "_high") or string.find(parts.van_facia_F, "_alt")
+		end
+		parts.simple_traffic_model = isUpfit and "simple_traffic_van_boxtruck" or "simple_traffic_van"
+
+		if isLate then
+			parts.simple_traffic_van_trim = "simple_traffic_van_trim_facelift"
+			parts.simple_traffic_van_trim_facelift = isLux and "simple_traffic_van_trim_facelift_chrome" or "simple_traffic_van_trim_facelift_plastic"
+		else
+			parts.simple_traffic_van_trim = "simple_traffic_van_trim_pre"
+			parts.simple_traffic_van_trim_pre = isLux and "simple_traffic_van_trim_pre_chrome" or "simple_traffic_van_trim_pre_plastic"
+		end
+		if isUpfit then
+			parts.simple_traffic_van_bumper_F = parts.van_bumper_F == "" and "" or nil
+			parts.simple_traffic_van_hood = parts.van_hood == "" and "" or nil
+		else
+			parts.simple_traffic_van_bumper_F = parts.van_bumper_F == "" and "" or "simple_traffic_van_bumper_F" -- fix skill issue
+			parts.simple_traffic_van_bumper_R = parts.van_bumper_R == "" and "" or "simple_traffic_van_bumper_R" -- fix skill issue
+			parts.simple_traffic_van_hood = parts.van_hood == "" and "" or "simple_traffic_van_hood" -- fix skill issue
+
+			 -- can be nil
+			if string.find(parts.van_body or parts.van_body_ext or "", "van_body_passenger") then
+				parts.simple_traffic_van_body = "simple_traffic_van_body_passenger"
+			elseif string.find(parts.van_body or parts.van_body_ext or "", "van_body_sidedoor") then
+				parts.simple_traffic_van_body = "simple_traffic_van_body_cargodoor"
+			else -- "van cab only" also lands here
+				parts.simple_traffic_van_body = "simple_traffic_van_body_cargo"
+			end
+		end
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	vivace = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_vivace"
+		if string.find(parts.vivace_bumper_F or "", "tograc_bumper_F") then
+			parts.simple_traffic_vivace_bumper_F_tograc = "simple_traffic_vivace_bumper_F_tograc"
+		else
+			parts.simple_traffic_vivace_bumper_F_vivace = parts.vivace_bumper_F == "" and "" or nil
+		end
+		if string.find(parts.vivace_bumper_R or "", "tograc_bumper_R") then
+			parts.simple_traffic_vivace_bumper_R_tograc = "simple_traffic_vivace_bumper_R_tograc"
+		else
+			parts.simple_traffic_vivace_bumper_R_vivace = parts.vivace_bumper_R == "" and "" or nil
+		end
+		if string.find(parts.vivace_hood or "", "tograc_hood") then
+			parts.simple_traffic_vivace_hood_tograc = "simple_traffic_vivace_hood_tograc"
+		else
+			parts.simple_traffic_vivace_hood_vivace = parts.vivace_hood == "" and "" or nil
+		end
+		parts.simple_traffic_vivace_trunk = parts.vivace_trunk == "" and "" or nil
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
+	wendover = function(vehicleConfig)
+		local parts = vehicleConfig.parts
+		local newModel = "simple_traffic"
+
+		parts.simple_traffic_model = "simple_traffic_wendover"
+		parts.simple_traffic_wendover_bumper_F = parts.wendover_bumper_F == "" and "" or nil
+		parts.simple_traffic_wendover_bumper_R = parts.wendover_bumper_R == "" and "" or nil
+		parts.simple_traffic_wendover_hood = parts.wendover_hood == "" and "" or nil
+		parts.simple_traffic_wendover_trunk = parts.wendover_trunk == "" and "" or nil
+
+		vehicleConfig.model = newModel
+		vehicleConfig.mainPartName = newModel
+		return newModel
+	end,
 }
 
 --- modify the given vehicleConfig so it as closely resembles the original config with simplified vehicle, or not touched if simplified vehicle not possible
 -- @tparam string vehicleName, eg covet, midsize
 -- @tparam table vehicleConfig, aka decodedData.vcf
+-- @treturn string newVehicleName, new vehicleName, because beam shoved all simplified traffic vehicle into simple_traffic vehicle
 -- @treturn table newVehicleConfig, that now contains the simplified body/parts, or the original table if no changes can be made
--- @usage local newVehicleConfig = simplifyVehicle("vivace", vehicleConfig)
+-- @usage local newVehicleName, newVehicleConfig = simplifyVehicle("vivace", vehicleConfig)
 local function simplifyVehicle(vehicleName, vehicleConfig)
-	newVehicleConfig = deepcopy(vehicleConfig)
+	local newVehicleConfig = deepcopy(vehicleConfig)
 
 	-- this do not check for incomptable parts
 	if vehicleSimplifiers[vehicleName] then
-		vehicleSimplifiers[vehicleName](newVehicleConfig.parts)
-		return newVehicleConfig
-	end
-
-	-- simple fallback logic
-	local expectedPartID = simplified_vehicles[vehicleName]
-	if expectedPartID then
-		local ioCtx = startLoading({string.format("/vehicles/%s/", vehicleName), "/vehicles/common/"}) -- generate io context for use later
-		local part = jbeamIO.getPart(ioCtx, expectedPartID)
-		local slotTypes = {}
-		if type(part.slotType) == 'string' then
-		  table.insert(slotTypes, part.slotType)
-		elseif type(part.slotType) == 'table' then
-		  slotTypes = part.slotType
-		end
-		for _, slotType in ipairs(slotTypes) do
-			if newVehicleConfig.parts[slotType] then
-				newVehicleConfig.parts[slotType] = expectedPartID
-				return newVehicleConfig
-			end
-		end
+		local newVehicleName = vehicleSimplifiers[vehicleName](newVehicleConfig) or vehicleName
+		vehicleSimplifiers.common(newVehicleConfig)
+		return newVehicleName, newVehicleConfig
 	end
 
 	table.clear(newVehicleConfig)
-	return vehicleConfig
+	return vehicleName, vehicleConfig
 end
 
 -- ============= OBJECTS =============
@@ -706,13 +885,21 @@ function Player:new(data)
 	o.shortname = data.name
 	o.playerID = tonumber(data.playerID)
 
-	local roleName = data.role or 'USER'
-	o.role = roleToInfo[roleName] or {}
-	o.role.name = roleName
+	if data.role then -- try to apply role received from the server
+		o.role = roleToInfo[data.role]
+		o.role.name = data.role
+	end
+	if not o.role then -- fallback to user
+		o.role = roleToInfo['USER']
+		o.role.name = 'USER'
+	end
+
 	o.isLocal = data.isLocal or false
 
 	o.nickPrefixes = {}
 	o.nickSuffixes = {}
+
+	o.customRole = nil
 
 	o.vehicles = {IDs = data.vehicleIDs or {}}
 
@@ -769,6 +956,12 @@ function Player:setNickSuffix(tagSource, text)
 	if text == nil then text = tagSource; tagSource = "default" end
 	self.nickSuffixes[tagSource] = text
 end
+function Player:setCustomRole(role)
+	self.customRole = role
+end
+function Player:clearCustomRole(roleName)
+	self.customRole = nil
+end
 function Player:delete()
 	log('W', 'Player:delete', string.format('Removing player %s (%i)! Data: %s', self.name, self.playerID, dumps(self)))
 	for k, v in pairs(self.vehicles) do
@@ -776,6 +969,7 @@ function Player:delete()
 	end
 	if self.activeVehicleID then vehicles[self.activeVehicleID].spectators[self.playerID] = nil end
 	players[self.playerID] = nil
+
 	self = nil
 end
 function Player:onSerialized()
@@ -854,10 +1048,19 @@ function Vehicle:delete()
 	end
 	if players[self.ownerID] and self.serverVehicleString then players[self.ownerID].vehicles.IDs[self.serverVehicleString] = nil end
 	if self.serverVehicleString then vehicles[self.serverVehicleString] = nil end
-	
-    	players_vehicle_configs[self.serverVehicleString] = nil
 
-    	self = nil
+	players_vehicle_configs[self.serverVehicleString] = nil
+
+	self = nil
+end
+function Vehicle:setCustomRole(role)
+	self.customRole = role
+end
+function Vehicle:clearCustomRole(roleName)
+	self.customRole = nil
+end
+function Vehicle:setDisplayName(displayName)
+	self.customName = displayName
 end
 function Vehicle:onSerialized()
 	local t = {
@@ -893,12 +1096,25 @@ end
 
 local function getQueueCounts()
 	local spawns, edits = 0, 0
+	local queuedPlayers = {}
+
+	local highlightQueuedPlayers = settings.getValue("highlightQueuedPlayers")
 
 	for serverVehicleID, vehicle in pairs(vehicles) do
-		if vehicle.spawnQueue then spawns = spawns + 1 end
-		if vehicle.editQueue then edits = edits + 1 end
+		if vehicle.spawnQueue then 
+			spawns = spawns + 1 
+			if highlightQueuedPlayers then
+				queuedPlayers[vehicle.ownerID] = true
+			end
+		end
+		if vehicle.editQueue then 
+			edits = edits + 1 
+			if highlightQueuedPlayers then
+				queuedPlayers[vehicle.ownerID] = true
+			end
+		end
 	end
-	return spawns, edits
+	return spawns, edits, queuedPlayers
 end
 
 
@@ -912,9 +1128,8 @@ local function sendVehicleSpawn(gameVehicleID)
 	if veh then -- In case of bug
 		local vehicleTable = {}
 		local vehicleData  = extensions.core_vehicle_manager.getVehicleData(gameVehicleID)
-		local veh          = be:getObjectByID(gameVehicleID)
 		local pos          = veh:getPosition()
-		local rot          = quat(veh:getRotation())
+		local rot          = quat(veh:getRotation()) -- getRotation is the only correct one on spawn, but doesn't update so direction vectors are needed in other places
 
 		vehicleTable.pid = MPConfig.getPlayerServerID() -- Player Server ID
 		vehicleTable.vid = gameVehicleID -- Game Vehicle ID
@@ -922,7 +1137,14 @@ local function sendVehicleSpawn(gameVehicleID)
 		vehicleTable.vcf = vehicleData.config -- Vehicle Config, contains paint data
 		vehicleTable.pos = {pos.x, pos.y, pos.z} -- Position
 		vehicleTable.rot = {rot.x, rot.y, rot.z, rot.w} -- Rotation
-		
+		vehicleTable.pro = settings.getValue("protectConfigFromClone", false) -- Should the config be protected?
+		if vehicleTable.pro == true then
+			vehicleTable.pro = "1"
+		else
+			vehicleTable.pro = "0"
+		end
+		vehicleTable.ign = settings.getValue("spawnVehicleIgnitionLevel") or 3 -- Ingition state
+
 		-- The vehicle_manager.lua may not contain the correct color values, since v0.31, when we read them from that lua, so we read those from the object itself
 		vehicleTable.vcf.paints = MPHelpers.getColorsFromVehObj(veh)
 
@@ -933,7 +1155,8 @@ local function sendVehicleSpawn(gameVehicleID)
 		--local vehObj = Vehicle:new({ isLocal=true, ownerName=MPConfig.getNickname(), gameVehicleID=gameVehicleID, jbeam=vehicleTable.jbm, ownerID=vehicleTable.pid })
 
 		if not players[vehicleTable.pid] or players[vehicleTable.pid].name ~= MPConfig.getNickname() then
-			players[vehicleTable.pid] = Player:new({name=MPConfig.getNickname(), playerID=vehicleTable.pid, isLocal=true })
+			local role = MPCoreNetwork.getAuthResult().role
+			players[vehicleTable.pid] = Player:new({name=MPConfig.getNickname(), playerID=vehicleTable.pid, isLocal=true, role=role })
 		end
 
 		--vehicles[gameVehicleID] = vehObj
@@ -955,7 +1178,14 @@ local function sendVehicleEdit(gameVehicleID)
 	vehicleTable.pid = MPConfig.getPlayerServerID()
 	vehicleTable.jbm = veh:getJBeamFilename()
 	vehicleTable.vcf = vehicleData.config
-	
+	vehicleTable.pro = settings.getValue("protectConfigFromClone", false) -- Should the config be protected?
+
+	if vehicleTable.pro == true then
+		vehicleTable.pro = "1"
+	else
+		vehicleTable.pro = "0"
+	end
+	vehicleTable.ign = settings.getValue("spawnVehicleIgnitionLevel") or 3 -- Ingition state
 	-- The vehicle_manager.lua may not contain the correct color values, since v0.31, when we read them from that lua, so we read those from the object itself
 	vehicleTable.vcf.paints = MPHelpers.getColorsFromVehObj(veh)
 
@@ -967,6 +1197,34 @@ end
 
 local function sendBeamstate(data, gameVehicleID)
 	MPGameNetwork.send('Ot:'..getServerVehicleID(gameVehicleID)..':'..data)
+end
+
+
+-- Patch Game Functions in relation to vehicle configs
+local core_vehicles_cloneCurrent = core_vehicles.cloneCurrent
+core_vehicles.cloneCurrent = function ()
+	local vehicle = be:getPlayerVehicle(0)
+	if vehicle:getField("protected", 0) == "1" then
+		local title = MPTranslate("ui.multiplayer.configprotection.clone.title", "Vehicle Clone Error")
+		local msg = MPTranslate("ui.multiplayer.configprotection.clone.message", "Sorry, you cannot clone this vehicle.")
+		guihooks.trigger("toastrMsg", {type="error", title=title, msg=msg})
+		return
+	else
+		core_vehicles_cloneCurrent()
+	end
+end
+
+local core_vehicle_partmgmt_saveLocal = extensions.core_vehicle_partmgmt.saveLocal
+local function core_vehicle_partmgmt_saveLocal_overwrite(p1)
+	local vehicle = be:getPlayerVehicle(0)
+	if vehicle:getField("protected", 0) == "1" then
+		local title = MPTranslate("ui.multiplayer.configprotection.save.title", "Vehicle Save Error")
+		local msg = MPTranslate("ui.multiplayer.configprotection.save.message", "Sorry, you cannot save this vehicle.")
+		guihooks.trigger("toastrMsg", {type="error", title=title, msg=msg})
+		return
+	else
+		core_vehicle_partmgmt_saveLocal(p1)
+	end
 end
 
 
@@ -983,24 +1241,32 @@ local function checkIfVehiclenameInvalid(vehicleName, playerName, v) -- TODO: fi
 	end
 
 	log('W', 'applyVehSpawn', "The received vehicle "..vehicleName.." is not valid, cancelling the spawn (likely a missing mod)")
-	if playerName then UI.showNotification("Player "..playerName.." spawned an illegal vehicle ("..vehicleName.."), it was skipped") end
+	if playerName then UI.showNotification("Player "..playerName.." spawned an illegal vehicle ("..vehicleName.."), it was skipped", ""..playerName..""..vehicleName.."illegal", "remove_circle") end
 	return true
 end
 
 
 local function applyVehSpawn(event)
-	local decodedData     = jsonDecode(event.data)
+	local decodedData = jsonDecode(event.data)
 	if not decodedData then --JSON decode failed
 		log("E", "applyVehSpawn", "Failed to spawn vehicle from "..event.playerNickname.."!")
 		return
 	end
 
-	local playerServerID  = decodedData.pid -- Server ID of the player that sent the vehicle
-	local gameVehicleID   = decodedData.vid -- gameVehicleID of the player that sent the vehicle
-	local vehicleName     = decodedData.jbm -- Vehicle name
-	local vehicleConfig   = decodedData.vcf -- Vehicle config, contains paint data
-	local pos             = vec3(decodedData.pos)
-	local rot             = decodedData.rot.w and quat(decodedData.rot) or quat(0,0,0,0) --ensure the rotation data is good
+	local playerServerID = decodedData.pid -- Server ID of the player that sent the vehicle
+	local gameVehicleID  = decodedData.vid -- gameVehicleID of the player that sent the vehicle
+	local vehicleName    = decodedData.jbm -- Vehicle name
+	local vehicleConfig  = decodedData.vcf -- Vehicle config, contains paint data
+	local pos            = vec3(decodedData.pos)
+	local rot            = quat(0,0,1,0) * quat(decodedData.rot) -- the car rotates 180 degrees on spawn so we need to counter that
+	local ignitionLevel  = (type(decodedData.ign) == "number") and decodedData.ign or 3
+	local protected      = decodedData.pro -- Config Protected
+
+	local vehicle = vehicles[event.serverVehicleID]
+	if vehicle and vehicle.position and vehicle.rotation then -- if we have receieved position packets then use that for position and rotation instead
+		pos = vec3(vehicle.position)
+		rot = quat(0,0,1,0) * quat(vehicle.rotation) -- the car rotates 180 degrees on spawn so we need to counter that
+	end
 
 	log('I', 'applyVehSpawn', "Spawning a vehicle from server with serverVehicleID "..event.serverVehicleID)
 	log('I', 'applyVehSpawn', "It is for "..event.playerNickname)
@@ -1010,7 +1276,7 @@ local function applyVehSpawn(event)
 	nextSpawnIsRemote = true -- this flag is used to indicate whether the next spawn is remote or not
 
 	if settings.getValue("simplifyRemoteVehicles") then
-		vehicleConfig = simplifyVehicle(vehicleName, vehicleConfig)
+		vehicleName, vehicleConfig = simplifyVehicle(vehicleName, vehicleConfig)
 	end
 
 	local spawnedVehID = getGameVehicleID(event.serverVehicleID)
@@ -1019,10 +1285,12 @@ local function applyVehSpawn(event)
 	if spawnedVeh then -- if a vehicle with this ID was found update the obj
 		log('W', 'applyVehSpawn', "(spawn)Updating vehicle from server "..vehicleName.." with id "..spawnedVehID)
 		spawn.setVehicleObject(spawnedVeh, {model=vehicleName, config=serialize(vehicleConfig), pos=pos, rot=rot, cling=true})
+		spawnedVeh:setField("protected", 0, protected or "0")
 	else
 		log('W', 'applyVehSpawn', "Spawning new vehicle "..vehicleName.." from server")
 		spawnedVeh = spawn.spawnVehicle(vehicleName, serialize(vehicleConfig), pos, rot, { autoEnterVehicle=false, vehicleName="multiplayerVehicle", cling=true})
 		spawnedVehID = spawnedVeh:getID()
+		spawnedVeh:setField("protected", 0, protected or "0")
 		log('W', 'applyVehSpawn', "Spawned new vehicle "..vehicleName.." from server with id "..spawnedVehID)
 
 		if not vehicles[event.serverVehicleID] then
@@ -1035,6 +1303,7 @@ local function applyVehSpawn(event)
 		vehicle.gameVehicleID = spawnedVehID
 		vehicle.isSpawned = true
 		vehicle.jbeam = vehicleName
+		vehicle.protected = protected
 		vehiclesMap[spawnedVehID] = event.serverVehicleID
 
 		players[vehicle.ownerID]:addVehicle(vehicle)
@@ -1042,6 +1311,7 @@ local function applyVehSpawn(event)
 
 	core_vehicles.setPlateText(event.playerNickname, spawnedVehID)
 	spawnedVeh:queueLuaCommand("hydros.onFFBConfigChanged(nil)")
+	spawnedVeh:queueLuaCommand("MPPowertrainVE.setIgnitionState("..ignitionLevel..")")
 end
 
 local function applyVehEdit(serverID, data)
@@ -1051,16 +1321,17 @@ local function applyVehEdit(serverID, data)
 	local veh = be:getObjectByID(gameVehicleID) -- Get the vehicle
 	if not veh then log('E','applyVehEdit',"Vehicle "..gameVehicleID.." not found") return end
 
-	local decodedData     = jsonDecode(data) -- Decode the data
-	local vehicleName     = decodedData.jbm -- Vehicle name
-	local vehicleConfig   = decodedData.vcf -- Vehicle config
+	local decodedData   = jsonDecode(data) -- Decode the data
+	local vehicleName   = decodedData.jbm -- Vehicle name
+	local vehicleConfig = decodedData.vcf -- Vehicle config
+	local protected       = decodedData.pro
 
 	local playerName = players[decodedData.pid] and players[decodedData.pid].name or 'Unknown'
 
 	if checkIfVehiclenameInvalid(vehicleName, playerName, vehicles[serverID]) then return end
 
 	if settings.getValue("simplifyRemoteVehicles") then
-		vehicleConfig = simplifyVehicle(vehicleName, vehicleConfig)
+		vehicleName, vehicleConfig = simplifyVehicle(vehicleName, vehicleConfig)
 	end
 
 	if vehicleName == veh:getJBeamFilename() then
@@ -1094,13 +1365,15 @@ local function applyVehEdit(serverID, data)
 		local options = {
 			model = vehicleName,
 			config = serialize(vehicleConfig),
-			pos = veh:getPosition(), rot = quat(veh:getRotation()), cling = true,
+			pos = veh:getPosition(), rot = quat(0,0,1,0) *  quatFromDir(-vec3(veh:getDirectionVector()), vec3(veh:getDirectionVectorUp())), cling = true,
 		}
 
 		veh:setDynDataFieldbyName("autoEnterVehicle", 0, tostring((be:getPlayerVehicle(0) and be:getPlayerVehicle(0):getID() == gameVehicleID) or false))
 		log('I', 'applyVehEdit', "Updating vehicle from server "..vehicleName.." with id "..serverID)
 		spawn.setVehicleObject(veh, options)
 	end
+	
+	veh:setField("protected", 0, protected or "0")
 end
 
 
@@ -1147,28 +1420,31 @@ local function onVehicleSpawned(gameVehicleID)
 
 	veh:queueLuaCommand("extensions.loadModulesInDirectory('lua/vehicle/extensions/BeamMP')") -- Load VE lua extensions
 
-	if vehicle then vehicle.jbeam = newJbeamName end
+	if vehicle then
+		vehicle.jbeam = newJbeamName
+		vehicle.vehicleHeight = veh:getInitialHeight()
+	end
+
 end
 
 --============================ ON VEHICLE REMOVED (CLIENT) ============================
 
 local function spawnDestroyedVehicles(serverVehID)
 
-    local vehdata = players_vehicle_configs[serverVehID]
-    if vehdata == nil then
-        
-        log("I", "restorePlayerVehicle", "couldnt find vehdata from the id given")
-        return
-    end
+	local vehdata = players_vehicle_configs[serverVehID]
+	if vehdata == nil then
+		log("I", "restorePlayerVehicle", "couldnt find vehdata from the id given")
+		return
+	end
 
-    if vehicles[serverVehID].isDeleted == false then
-        UI.showNotification('This vehicle hasnt been deleted yet?')
-        log("I", "restorePlayerVehicle", "This vehicle hasnt been deleted yet")
-        return
-    end
+	if vehicles[serverVehID].isDeleted == false then
+		UI.showNotification(''..vehicles[serverVehID].ownerName.."'s "..vehicles[serverVehID].jbeam.." hasn't been deleted yet?", ''..serverVehID..'delete', 'warning')
+		log("I", "restorePlayerVehicle", "This vehicle hasn't been deleted yet")
+		return
+	end
 
-    vehicles[serverVehID].isSpawned = true
-    vehicles[serverVehID].isDeleted = false
+	vehicles[serverVehID].isSpawned = true
+	vehicles[serverVehID].isDeleted = false
 		-- queue system
 --		local eventdata = {
 --			playerNickname = playerNickname,  -- same as owner name??? we shall find out
@@ -1176,42 +1452,41 @@ local function spawnDestroyedVehicles(serverVehID)
 --			data = data
 --		}
 
-    local playerOwnerName = vehicles[serverVehID].ownerName
+	local playerOwnerName = vehicles[serverVehID].ownerName
 
-    local encodedVehicleData = jsonEncode(vehdata)
+	local encodedVehicleData = jsonEncode(vehdata)
 
-    local eventdata = {
-        playerNickname = playerOwnerName,  --- mabye a issue?
-        serverVehicleID = serverVehID,
-        data = encodedVehicleData
-    }
-    UI.showNotification('Trying to respawn '..playerOwnerName)
-    if settings.getValue("enableSpawnQueue") then
-        vehicles[serverVehID].spawnQueue = eventdata
-        UI.updateQueue(getQueueCounts())
-    else
-        log("D", "restorePlayerVehicle", "Queue disabled, spawning vehicle now")
-        applyVehSpawn(eventdata)
-        UI.updateQueue(0, 0)
-    end
+	local eventdata = {
+		playerNickname = playerOwnerName,  --- mabye a issue?
+		serverVehicleID = serverVehID,
+		data = encodedVehicleData
+	}
+	UI.showNotification('Trying to respawn '..playerOwnerName.."'s "..vehicles[serverVehID].jbeam, ''..playerOwnerName..''..serverVehID..'respawn', 'directions_car')
+	if settings.getValue("enableSpawnQueue") then
+		vehicles[serverVehID].spawnQueue = eventdata
+		UI.updateQueue(getQueueCounts())
+	else
+		log("D", "restorePlayerVehicle", "Queue disabled, spawning vehicle now")
+		applyVehSpawn(eventdata)
+		UI.updateQueue(0, 0)
+	end
 end
 
 local function restorePlayerVehicle(playerName)
-    --  not a properproper wayyy of doing this
+	-- not a properproper wayyy of doing this
 
-    local player =  getPlayerByName(playerName)
-    if player == nil then
-        log("E", "restorePlayerVehicle", "Couldnt find player??")
+	local player = getPlayerByName(playerName)
+	if player == nil then
+		log("E", "restorePlayerVehicle", "Couldnt find player??")
+	end
 
-    end
+	-- its a table of ids
+	local vehicles_ServerIDs = player.vehicles.IDs
 
-    -- its a table of ids
-    local vehicles_ServerIDs = player.vehicles.IDs
-
-    for x,y in pairs(vehicles_ServerIDs)do
-        spawnDestroyedVehicles(y)
-        log("D", "restorePlayerVehicle", "Trying to respawn : ".. tostring(x) .. tostring(y))
-    end
+	for x,y in pairs(vehicles_ServerIDs)do
+		spawnDestroyedVehicles(y)
+		log("D", "restorePlayerVehicle", "Trying to respawn : ".. tostring(x) .. tostring(y))
+	end
 end
 
 
@@ -1223,7 +1498,6 @@ local function onVehicleDestroyed(gameVehicleID)
 
 		if not vehicle then return end
 		local serverVehicleID = vehicle.serverVehicleString -- Get the serverVehicleID
-		removeVehicleRole(serverVehicleID) -- remove possible custom role for that vehicle
 
 		vehicle.isSpawned = false
 		vehicle.isDeleted = true
@@ -1250,12 +1524,12 @@ local function onVehicleDestroyed(gameVehicleID)
 							[mainPartName] = string
 							[licenseName] = string
 							[model] = string
-							
+
 							the .pc format v2 contains all the same data in the same structure.. just with "format" and not with "partConfigFilename"
 						]]
 						vehicleConfig.format = 2
 						vehicleConfig.partConfigFilename = nil
-						
+
 						local handle = io.open("vehicles/unicycle/beammp_default.pc", "w")
 						if handle == nil then
 							log('I', "onVehicleDestroyed", 'Cannot open "vehicles/unicycle/beammp_default.pc" in write mode.')
@@ -1277,8 +1551,22 @@ local function onVehicleDestroyed(gameVehicleID)
 	end
 end
 
+local function sendActiveVehicleID(newVehObj)
+	local newServerVehicleID = newVehObj.serverVehicleString -- Get serverVehicleID of the vehicle the player switched to
+	if not newServerVehicleID then
+		newServerVehicleID = tostring(MPConfig.getPlayerServerID()) .. '-' .. -1 -- if the vehicle doesn't exist we still want to send that it changed to remove the spectator nametag
+	end
+	if newServerVehicleID then
+		local playerID = MPConfig.getPlayerServerID()
+		local s = tostring(playerID) .. ':' .. newServerVehicleID
+
+		MPGameNetwork.send('Om:'.. s)
+	end
+end
+
 --============================ ON VEHICLE SWITCHED (CLIENT) ============================
 local function onVehicleSwitched(oldGameVehicleID, newGameVehicleID)
+	extensions.core_vehicle_partmgmt.saveLocal = core_vehicle_partmgmt_saveLocal_overwrite
 	if MPCoreNetwork.isMPSession() then
 		log('I', "onVehicleSwitched", "Vehicle switched from "..oldGameVehicleID or "unknown".." to "..newGameVehicleID or "unknown")
 
@@ -1338,13 +1626,7 @@ local function onVehicleSwitched(oldGameVehicleID, newGameVehicleID)
 					log('E', "onVehicleSwitched", "Could not find a suitable vehicle to switch to, exiting current veh")
 				end
 			else
-				local newServerVehicleID = newVehObj.serverVehicleString -- Get serverVehicleID of the vehicle the player switched to
-				if newServerVehicleID then
-					local playerID, serverVehicleID = MPConfig.getPlayerServerID(), newServerVehicleID
-					local s = tostring(playerID) .. ':' .. newServerVehicleID
-
-					MPGameNetwork.send('Om:'.. s)
-				end
+				sendActiveVehicleID(newVehObj)
 			end
 		end
 	end
@@ -1358,7 +1640,7 @@ local function onVehicleResetted(gameVehicleID)
 			--print("Vehicle "..gameVehicleID.." resetted by client")
 			local veh = be:getObjectByID(gameVehicleID)
 			local pos = veh:getPosition()
-			local rot = quat(veh:getRotation())
+			local rot = quatFromDir(-vec3(veh:getDirectionVector()), vec3(veh:getDirectionVectorUp()))
 			local tempTable = {
 				pos = {
 					x = pos.x,
@@ -1377,6 +1659,19 @@ local function onVehicleResetted(gameVehicleID)
 	end
 end
 
+--============================ ON VEHICLE COLOR CHANGED (CLIENT) ============================
+local function onVehicleColorChanged(gameVehicleID, index, paint)
+    if not MPCoreNetwork.isMPSession() then return end -- do nothing if singleplayer
+    local vehicle = getVehicleByGameID(gameVehicleID) -- get vehicle table for this vehicle
+    if vehicle and vehicle.serverVehicleString and vehicle.isLocal then -- If serverVehicleID not null and player own vehicle
+
+        local veh = be:getObjectByID(gameVehicleID) -- get vehicle as object
+		local paintData =  MPHelpers.getColorsFromVehObj(veh)
+        paintData[index] = paint --insert new paint at index as chosen from color picker
+
+		MPGameNetwork.send('Op:'..vehicle.serverVehicleString..":"..jsonEncode(paintData).."")
+    end
+end
 
 
 -- server events
@@ -1389,8 +1684,8 @@ local function onServerVehicleSpawned(playerRole, playerNickname, serverVehicleI
 		return
 	end
 
-	local playerServerID   = tonumber(decodedData.pid) -- Server ID of the owner
-	local gameVehicleID    = tonumber(decodedData.vid) -- remote gameVehicleID
+	local playerServerID = tonumber(decodedData.pid) -- Server ID of the owner
+	local gameVehicleID  = tonumber(decodedData.vid) -- remote gameVehicleID
 
 	--create player object if this is their first vehicle
 	if not players[playerServerID] or players[playerServerID].name ~= playerNickname then
@@ -1399,7 +1694,7 @@ local function onServerVehicleSpawned(playerRole, playerNickname, serverVehicleI
 	end
 
 	if not settings.getValue("showDebugOutput") then
-	  log("I", "onServerVehicleSpawned", "Received a vehicle spawn for player " .. playerNickname .. " with ID " .. serverVehicleID .. ' '..dumpsz(decodedData, 2))
+		log("I", "onServerVehicleSpawned", "Received a vehicle spawn for player " .. playerNickname .. " with ID " .. serverVehicleID .. ' '..dumpsz(decodedData, 2))
 	end
 
 	if MPConfig.getPlayerServerID() == decodedData.pid then -- If the IDs match it's a local vehicle
@@ -1412,6 +1707,10 @@ local function onServerVehicleSpawned(playerRole, playerNickname, serverVehicleI
 		vehiclesMap[gameVehicleID] = serverVehicleID
 
 		players[playerServerID]:addVehicle(vehObject)
+
+		if be:getPlayerVehicleID(0) == gameVehicleID then
+			sendActiveVehicleID(vehObject)
+		end
 
 		log("W", "onServerVehicleSpawned", "ID is same as received ID, synced vehicle gameVehicleID: "..gameVehicleID.." with ServerID: "..serverVehicleID)
 
@@ -1434,15 +1733,20 @@ local function onServerVehicleSpawned(playerRole, playerNickname, serverVehicleI
 			data = data
 		}
 
-        	players_vehicle_configs[serverVehicleID] = decodedData
+		players_vehicle_configs[serverVehicleID] = decodedData
 
 		if settings.getValue("enableSpawnQueue") and not (settings.getValue("queueSkipUnicycle") and decodedData.jbm == "unicycle") then
 			log("I", "onServerVehicleSpawned", "Adding spawn for " .. playerNickname .. " to queue")
 
 			vehicles[serverVehicleID].spawnQueue = eventdata
 
+			local icon = 'directions_car'
+			if decodedData.jbm == "unicycle" then
+				icon = "person"
+			end
+
 			UI.updateQueue(getQueueCounts())
-			UI.showNotification('Spawn received and queued for '..playerNickname)
+			UI.showNotification('Spawn received and queued for '..playerNickname, ''..playerNickname..''..serverVehicleID..'spawn', icon)
 		else
 			log("I", "onServerVehicleSpawned", "Queue disabled, spawning vehicle now")
 
@@ -1463,12 +1767,12 @@ local function onServerVehicleEdited(serverID, data)
 	local owner = vehicles[serverID]:getOwner()
 	if not owner.vehicles.IDs[serverID] then owner:addVehicle(vehicles[serverID]) end
 
-    	local saveVehicleRot =  players_vehicle_configs[serverID].rot
-    	local saveVehiclePos =  players_vehicle_configs[serverID].pos
+	local saveVehicleRot = players_vehicle_configs[serverID].rot
+	local saveVehiclePos = players_vehicle_configs[serverID].pos
 
-    	players_vehicle_configs[serverID] = decodedData
-    	players_vehicle_configs[serverID].pos = saveVehiclePos
-    	players_vehicle_configs[serverID].rot = saveVehicleRot
+	players_vehicle_configs[serverID] = decodedData
+	players_vehicle_configs[serverID].pos = saveVehiclePos
+	players_vehicle_configs[serverID].rot = saveVehicleRot
 
 
 	if settings.getValue("enableSpawnQueue") and not (settings.getValue("queueSkipUnicycle") and decodedData.jbm == "unicycle") then
@@ -1477,7 +1781,7 @@ local function onServerVehicleEdited(serverID, data)
 		log('I', 'onServerVehicleEdited', "edit "..serverID.." queued")
 		local playerNickname = owner and owner.name or "unknown"
 		UI.updateQueue(getQueueCounts())
-		UI.showNotification('Edit received and queued for '..playerNickname)
+		UI.showNotification('Edit received and queued for '..playerNickname, ''..playerNickname..''..serverID..'edit', 'build')
 	else
 		local currentVeh = be:getPlayerVehicle(0) -- Camera fix
 
@@ -1516,9 +1820,11 @@ local function onServerVehicleRemoved(serverVehicleID)
 			--vehicle:delete()
 		else
 			log('W', "onServerVehicleRemoved", "Failed removing vehicle "..serverVehicleID..", Vehicle can't be found")
+			vehicle:delete()
 		end
 	else
 		log('W', "onServerVehicleRemoved", "Failed removing vehicle "..serverVehicleID..", ID is unknown")
+		vehicle:delete()
 	end
 end
 
@@ -1531,10 +1837,12 @@ local function onServerVehicleResetted(serverVehicleID, data)
 			local veh = be:getObjectByID(gameVehicleID) -- Get associated vehicle
 			if veh then
 				local pr = jsonDecode(data) -- Decoded data
-				veh:reset()
+				veh:queueLuaCommand("extensions.hook(\"onBeamMPVehicleReset\")")
 				if pr then
 					veh:setPositionRotation(pr.pos.x, pr.pos.y, pr.pos.z, pr.rot.x, pr.rot.y, pr.rot.z, pr.rot.w) -- Apply position
+					veh:resetBrokenFlexMesh() -- setPositionRotation resets the vehicle but not the FlexMesh so we need to do that manually
 				else
+					veh:reset()
 					log('E', "onServerVehicleResetted", "Could not parse posrot JSON")
 				end
 			end
@@ -1550,22 +1858,41 @@ local function onServerVehicleCoupled(serverVehicleID, data)
 	if not vehicle.isLocal then
 		local veh = be:getObjectByID(vehicle.gameVehicleID)
 		if veh then
-			veh:queueLuaCommand("couplerVE.toggleCouplerState('"..data.."')")
+			veh:queueLuaCommand("couplerVE.toggleCouplerState(mime.unb64(\'".. MPHelpers.b64encode(data) .."\'))")
 		end
 	end
 end
 
 local function onServerCameraSwitched(playerID, serverVehicleID)
 	if not players[playerID] then return end -- TODO: better fix?
-	if not vehicles[serverVehicleID] then return end
 	if players[playerID] and players[playerID].activeVehicleID and vehicles[players[playerID].activeVehicleID] then
 		vehicles[players[playerID].activeVehicleID].spectators[playerID] = nil -- clear prev spectator field
 	end
 
 	players[playerID].activeVehicleID = serverVehicleID
+
+	if not vehicles[serverVehicleID] then return end
 	vehicles[serverVehicleID].spectators[playerID] = true
 end
 
+local function onServerVehicleColorChanged(serverVehicleID, data)
+	local gameVehicleID = getGameVehicleID(serverVehicleID) -- Get game ID
+	local vehicle = getVehicleByGameID(gameVehicleID) -- get vehicle table for this vehicle
+	if vehicle and vehicle.serverVehicleString and not vehicle.isLocal and not vehicle.editQueue then -- If serverVehicleID not null and not player own vehicle
+		if gameVehicleID then
+			local veh = be:getObjectByID(gameVehicleID) -- Get associated vehicle
+			if veh then
+				local paint = jsonDecode(data) -- Decoded data
+				if paint then -- if there's paint data
+					veh:queueLuaCommand("extensions.hook(\"onBeamMPVehicleColorChange\")")
+					for k, v in pairs(paint) do -- apply paint
+						extensions.core_vehicle_manager.liveUpdateVehicleColors(gameVehicleID, veh, k, v)
+					end
+				end
+			end
+		end
+	end
+end
 
 local HandleNetwork = {
 	['s'] = function(rawData) -- spawn
@@ -1621,6 +1948,15 @@ local HandleNetwork = {
 			onServerCameraSwitched(playerID, serverVehicleID)
 		else
 			-- public version has missing playerID
+		end
+	end,
+	['p'] = function(rawData) -- live paint update
+		local serverVehicleID, data = string.match(rawData,"^(%d+%-%d+)%:(%[.+%])") -- '0-0:[jsonstring]'
+
+		if serverVehicleID ~= nil then
+			onServerVehicleColorChanged(serverVehicleID, data)
+		else
+			log('E', "HandleNetwork", "Color pattern match failed")
 		end
 	end
 }
@@ -1824,26 +2160,37 @@ local function focusCameraOnPlayer(targetName)
 	end
 end
 
-local function applyQueuedEvents()
-	UI.updateQueue(getQueueCounts())
+local function applyVehicleQueues(serverVehicleID, vehicle) 
+	if vehicle.spawnQueue then
+		local data = vehicle.spawnQueue
+		vehicle.spawnQueue = nil
+		applyVehSpawn(data)
+	end
+	if vehicle.editQueue then
+		local data = vehicle.editQueue
+		vehicle.editQueue = nil
+		applyVehEdit(serverVehicleID, data)
+	end
+end
 
+local function applyQueuedEvents()
 	for serverVehicleID, vehicle in pairs(vehicles) do
-		if vehicle.spawnQueue then
-			local data = vehicle.spawnQueue
-			vehicle.spawnQueue = nil
-			applyVehSpawn(data)
-		end
-		if vehicle.editQueue then
-			local data = vehicle.editQueue
-			vehicle.editQueue = nil
-			applyVehEdit(serverVehicleID, data)
-		end
+		applyVehicleQueues(serverVehicleID, vehicle)
 	end
 
 	UI.updateQueue(getQueueCounts())
 	--if currentVeh then be:enterVehicle(0, currentVeh) print("entered "..currentVeh:getJBeamFilename()) end -- Camera fix
 end
 
+local function applyPlayerQueues(playerID)
+	for serverVehicleID, vehicle in pairs(vehicles) do
+		if vehicle.ownerID == playerID then
+			applyVehicleQueues(serverVehicleID, vehicle)
+		end
+	end
+
+	UI.updateQueue(getQueueCounts())
+end
 
 local function onUpdate(dt)
 	if MPGameNetwork and MPGameNetwork.launcherConnected() then
@@ -1942,7 +2289,14 @@ local function onPreRender(dt)
 			local veh = be:getObjectByID(gameVehicleID)
 
 			if v.isSpawned and veh then -- update position if available
-				v.position = veh:getPosition()
+				if not v.vehicleHeight then
+					v.vehicleHeight = veh:getInitialHeight()
+				end
+				local tempPosx,tempPosy,tempPosz = be:getObjectOOBBCenterXYZ(gameVehicleID)
+				v.position = vec3(tempPosx,tempPosy,tempPosz)
+				v.position.z = v.position.z + (v.vehicleHeight * 0.5) + 0.2
+
+				v.rotation = quatFromDir(-vec3(veh:getDirectionVector()), vec3(veh:getDirectionVectorUp())) -- getRotation doesn't update in GE so we need to use direction vectors instead
 			end
 
 			if not v.position then goto skip_vehicle end -- return if no position has been received yet
@@ -1969,6 +2323,7 @@ local function onPreRender(dt)
 
 				if colors then
 					debugDrawer:drawSphere(pos, 1, ColorF(colors[1], colors[2], colors[3], 0.5))
+					pos.z = pos.z + 1
 				end
 			end
 
@@ -1978,7 +2333,7 @@ local function onPreRender(dt)
 			local distfloat = (cameraPos or vec3()):distance(pos)
 			distanceMap[gameVehicleID] = distfloat
 			nametagAlpha = clamp(linearScale(distfloat, nametagFadeoutDistance, 0, 0, 1), 0, 1)
-			
+
 			if not settings.getValue("hideNameTags") and nicknamesAllowed and not hideNicknamesToggle then
 
 				local dist = ""
@@ -2012,6 +2367,8 @@ local function onPreRender(dt)
 					else veh:setMeshAlpha(1 - clamp(linearScale(distfloat, 20, 0, 0, 1), 0, 1), "", false) end
 				end
 
+				if v.hideNametag or owner.hideNametag then goto skip_vehicle end
+
 				if settings.getValue("nameTagFadeEnabled") and not commands.isFreeCamera() then
 					if settings.getValue("nameTagFadeInvert") then
 						nametagAlpha = 1 - nametagAlpha
@@ -2020,24 +2377,15 @@ local function onPreRender(dt)
 
 				if not settings.getValue("nameTagFadeEnabled") then nametagAlpha = 1 end
 				if settings.getValue("nameTagDontFullyHide") then nametagAlpha = math.max(0.3, nametagAlpha) end
-				
-				local name = ""
-				local tag = ""
-				local backColor = 0
-				local roleInfo = custom_vehicleRoles[serverVehicleID]
-				if roleInfo == nil then -- if default role
-					roleInfo = owner.role
-					backColor = ColorI(roleInfo.backcolor.r, roleInfo.backcolor.g, roleInfo.backcolor.b, math.floor(nametagAlpha*127))
-					name = settings.getValue("shortenNametags") and owner.shortname or owner.name
-					tag = settings.getValue("shortenNametags") and roleInfo.shorttag or roleInfo.tag
-				else -- if custom role
-					if roleInfo.Role == "BLANK" then goto skip_vehicle end -- we dont draw hidden player tags
-					name = roleInfo.DisplayName -- found in the custom_vehicleRoles table
-					roleInfo = custom_roleToInfo[roleInfo.Role] -- the rest of the information is in the custom_roleToInfo table
-					backColor = ColorI(roleInfo.backcolor.r, roleInfo.backcolor.g, roleInfo.backcolor.b, math.floor(nametagAlpha*127))
-					tag = settings.getValue("shortenNametags") and roleInfo.shorttag or roleInfo.tag
-				end
 
+
+				local roleInfo = v.customRole or owner.customRole or owner.role
+
+				local ownerName = settings.getValue("shortenNametags") and owner.shortname or owner.name
+				local name = v.customName or ownerName
+
+				local tag = settings.getValue("shortenNametags") and roleInfo.shorttag or roleInfo.tag
+				local backColor = ColorI(roleInfo.backcolor.r, roleInfo.backcolor.g, roleInfo.backcolor.b, math.floor(nametagAlpha*127))
 
 				local prefix = ""
 				for source, tag in pairs(owner.nickPrefixes)
@@ -2047,7 +2395,6 @@ local function onPreRender(dt)
 				for source, tag in pairs(owner.nickSuffixes)
 					do suffix = suffix..tag.." " end
 
-				pos.z = pos.z + 2.0 -- Offset nametag so it appears above the vehicle, not inside
 
 				-- draw spectators
 				if settings.getValue("showSpectators") then
@@ -2166,7 +2513,7 @@ local function onVehicleReady(gameVehicleID)
 	end
 
 	if veh.mpVehicleType then
-		veh:queueLuaCommand("MPVehicleVE.setVehicleType('".. veh.mpVehicleType .."')")
+		veh:queueLuaCommand("MPVehicleVE.setVehicleType(mime.unb64(\'".. MPHelpers.b64encode(veh.mpVehicleType) .."\'))")
 	end
 	MPGameNetwork.onVehicleReady(gameVehicleID)
 end
@@ -2217,11 +2564,12 @@ M.onVehicleSpawned         = onVehicleSpawned
 M.onVehicleDestroyed       = onVehicleDestroyed
 M.onVehicleSwitched        = onVehicleSwitched
 M.onVehicleResetted        = onVehicleResetted
+M.onVehicleColorChanged    = onVehicleColorChanged
 M.onPlayerLeft             = onPlayerLeft
 M.onClientPostStartMission = onDisconnect
 M.onUIInitialised          = onUIInitialised
 -- FUNCTIONS
-M.restorePlayerVehicle     = restorePlayerVehicle         -- takes: playerID eg 1 2 3 4 
+M.restorePlayerVehicle     = restorePlayerVehicle         -- takes: playerID eg 1 2 3 4
 M.getPlayers               = getPlayers               -- takes: -
 M.getVehicles              = getVehicles              -- takes: -
 M.getVehicleByGameID       = getVehicleByGameID       -- takes: number gameID, returns Vehicle
@@ -2237,10 +2585,10 @@ M.hideNicknames            = hideNicknames            -- takes: bool   returns: 
 M.toggleNicknames          = toggleNicknames          -- takes: -
 M.setPlayerNickPrefix      = setPlayerNickPrefix      -- takes: string targetName, string tagSource, string text
 M.setPlayerNickSuffix      = setPlayerNickSuffix      -- takes: string targetName, string tagSource, string text
-M.createRole               = createRole               -- takes: string roleName, string tag, string shortag, int red, int green, int blue
-M.removeRole               = removeRole               -- takes: string roleName
-M.setVehicleRole           = setVehicleRole           -- takes: string playerIDvehicleID, string roleName, string displayName
-M.removeVehicleRole        = removeVehicleRole        -- takes: string playerIDVehicleID
+M.setVehicleRole           = setVehicleRole           -- takes: string playerIDvehicleID, string tag, string shorttag, number red, number green, number blue
+M.clearVehicleRole         = clearVehicleRole         -- takes: string playerIDVehicleID
+M.setPlayerRole            = setPlayerRole            -- takes: string playerID, string tag, string shorttag, number red, number green, number blue
+M.clearPlayerRole          = clearPlayerRole          -- takes: string playerID
 M.getGameVehicleID         = getGameVehicleID         -- takes: -      returns: { 'gamevehid' : 'servervehid', '23456' : '1-2' }
 M.getServerVehicleID       = getServerVehicleID       -- takes: -      returns: { 'servervehid' : 'gamevehid', '1-2' : '23456' }
 M.saveDefaultRequest       = saveDefaultRequest       -- takes: -
@@ -2249,8 +2597,8 @@ M.spawnRequest             = spawnRequest             -- takes: jbeamName, confi
 M.replaceRequest           = replaceRequest           -- takes: jbeamName, config, colors
 M.sendBeamstate            = sendBeamstate            -- takes: string state, number gameVehicleID
 M.applyQueuedEvents        = applyQueuedEvents        -- takes: -      returns: -
+M.applyPlayerQueues        = applyPlayerQueues        -- takes: playerID
 M.teleportVehToPlayer      = teleportVehToPlayer      -- takes: string targetName
-M.teleportCameraToPlayer   = focusCameraOnPlayer      -- takes: string targetName NOTE: DEPRECATED
 M.focusCameraOnPlayer      = focusCameraOnPlayer      -- takes: string targetName
 M.groundmarkerToPlayer     = groundmarkerToPlayer     -- takes: string targetName
 M.groundmarkerFollowPlayer = groundmarkerFollowPlayer -- takes: string targetName
@@ -2258,8 +2606,31 @@ M.queryRoadNodeToPosition  = queryRoadNodeToPosition  -- takes: vec3 target posi
 M.sendVehicleEdit          = sendVehicleEdit          -- UI 'Sync' button
 M.onVehicleReady           = onVehicleReady           -- Called when our VE files load and the vehicle is ready
 M.onSettingsChanged        = onSettingsChanged        -- takes: -
+M.getRoleInfoTable         = getRoleInfoTable
+M.sendPendingVehicleEdits  = sendPendingVehicleEdits  -- takes: -
 M.onInit = function() setExtensionUnloadMode(M, "manual") end
 
+local function depricationWarning(oldFnName, replacementName)
+	local msg = "Deprecated function! Please update your code to use " .. tostring(replacementName)
+	log('E', oldFnName, debug.traceback(msg))
+	guihooks.trigger("toastrMsg", {type="warning", title="Deprecated BeamMP function used", msg=msg})
 
+	return nil, msg
+end
+
+
+local function teleportCameraToPlayer(playername)
+	depricationWarning('teleportCameraToPlayer', 'MPVehicleGE.focusCameraOnPlayer')
+	focusCameraOnPlayer(playername)
+end
+
+function createRole() depricationWarning('createRole', 'MPVehicleGE.setVehicleRole/setPlayerRole') end
+function removeRole() depricationWarning('removeRole', 'MPVehicleGE.clearVehicleRole/clearPlayerRole') end
+function removeVehicleRole() depricationWarning('removeVehicleRole', 'MPVehicleGE.clearVehicleRole/clearPlayerRole') end
+
+M.createRole = createRole
+M.removeRole = removeRole
+M.removeVehicleRole = removeVehicleRole
+M.teleportCameraToPlayer   = teleportCameraToPlayer
 
 return M

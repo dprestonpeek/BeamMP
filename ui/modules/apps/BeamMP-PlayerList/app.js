@@ -19,6 +19,8 @@ app.directive('multiplayerplayerlist', [function () {
 app.controller("PlayerList", ['$scope', function ($scope) {
 	$scope.warnVis = false;
 	$scope.timer = null;
+	$scope.showPlayerIDs = true
+	$scope.queueWithLMB = true;
 	$scope.init = function() {
 		// Set players list direction
 		setPLDirection(localStorage.getItem('plHorizontal'));
@@ -26,10 +28,21 @@ app.controller("PlayerList", ['$scope', function ($scope) {
 		if (localStorage.getItem('plShown') == 1) showList();
 	};
 
+	$scope.settingsChanged = function() {
+    bngApi.engineLua('settings.getValue("showPlayerIDs")', (data) => {
+      $scope.showPlayerIDs = data
+    })
+	bngApi.engineLua('settings.getValue("queueWithLMB")', (data) => {
+		$scope.queueWithLMB = data
+	  })
+  }
+  $scope.settingsChanged()
+
 	$scope.reset = function() {
 		connected = false;
 		players = [];
 		$scope.init();
+		$scope.settingsChanged()
 	};
 
 	$scope.select = function() {
@@ -112,11 +125,18 @@ app.controller("PlayerList", ['$scope', function ($scope) {
 				// Insert a row at the end of the players list
 				var row = playersList.insertRow(playersList.rows.length);
 	
+				row.setAttribute("id", "playerlist-row-" + parsedList[i].id);
+
 				// Insert a cell containing the player server id
 				var idCell = row.insertCell(0);
 				idCell.textContent = parsedList[i].id;
 				idCell.setAttribute("onclick", "restorePlayerVehicle('"+parsedList[i].name+"')");
-				idCell.setAttribute("class", "player-id");
+				if ($scope.showPlayerIDs) {
+					idCell.setAttribute("class", "player-id");
+				} else {
+					idCell.setAttribute("class", "player-id ng-hide");
+				}
+				
 
 
 				// Insert a cell containing the player name
@@ -124,7 +144,8 @@ app.controller("PlayerList", ['$scope', function ($scope) {
 				nameCell.textContent = parsedList[i].formatted_name;
 				//var c = parsedList[i].color
 				//nameCell.style = `color:rgba(${c[0]},${c[1]},${c[2]},255)`;
-				nameCell.setAttribute("onclick", "showPlayerInfo('"+parsedList[i].name+"')");
+				nameCell.setAttribute($scope.queueWithLMB ? "oncontextmenu" : "onclick", "showPlayerInfo('"+parsedList[i].name+"')");
+				nameCell.setAttribute($scope.queueWithLMB ? "onclick" : "oncontextmenu","applyQueuesForPlayer('"+parsedList[i].id+"')");
 				nameCell.setAttribute("class", "player-button");
 
 				// Insert a cell containing the link to forum
@@ -150,6 +171,10 @@ app.controller("PlayerList", ['$scope', function ($scope) {
 				btn.setAttribute("onclick","teleportToPlayer('"+parsedList[i]+"')");
 				btn.setAttribute("class", "tp-button buttons");
 				pingCell.appendChild(btn);
+
+				if ($scope.queuedPlayers[parsedList[i].id] == true) {
+					row.style.setProperty('background-color', 'var(--bng-orange-shade1)');
+				}
 			}
 			if(document.getElementById("plist-container").style.display == "block")
 				document.getElementById("show-button").style.height = playersList.offsetHeight + "px"; 
@@ -160,7 +185,30 @@ app.controller("PlayerList", ['$scope', function ($scope) {
 	$scope.$on('setNickname', function(event, data) {
 		nickname = data
 	})
-	bngApi.engineLua('UI.updatePlayersList()'); // insantly populate the playerlist
+
+	$scope.queuedPlayers = []
+
+	$scope.$on('setQueue', function(event, data) {
+		$scope.queuedPlayers = []
+
+		if (!data.queuedPlayers) {
+			var rows = document.querySelectorAll('[id^="playerlist-row-"]');
+			for (let i = 0; i < rows.length; i++) {
+				rows[i].style.setProperty('background-color', 'transparent');
+			}
+			return
+		}
+
+		for (var key in data.queuedPlayers) {
+			$scope.queuedPlayers[key] = data.queuedPlayers[key]
+			var playerrow = document.getElementById("playerlist-row-" + key)
+			if (playerrow) {
+				playerrow.style.setProperty('background-color', data.queuedPlayers[key] ? 'var(--bng-orange-shade1)' : 'transparent')
+			}
+		}
+	})
+
+	bngApi.engineLua('UI.updatePlayersList(); UI.sendQueue()'); // instantly populate the playerlist and their queues
 }]);
 
 
@@ -183,9 +231,13 @@ function restorePlayerVehicle(targetPlayerName){
     	bngApi.engineLua('MPVehicleGE.restorePlayerVehicle("'+targetPlayerName+'")')
 }
 
+function applyQueuesForPlayer(targetPlayerID) {
+	bngApi.engineLua('MPVehicleGE.applyPlayerQueues('+targetPlayerID+')')
+}
+
 function showPlayerInfo(targetPlayerName) {
 	//console.log("showPlayerInfoEvent: " + targetPlayerName);
-	bngApi.engineLua('MPVehicleGE.teleportCameraToPlayer("'+targetPlayerName+'")')
+	bngApi.engineLua('MPVehicleGE.focusCameraOnPlayer("'+targetPlayerName+'")')
 }
 
 

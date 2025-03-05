@@ -16,10 +16,13 @@ local M = {}
 -- launcher
 local TCPLauncherSocket = nop -- Launcher socket
 local socket = require('socket')
+local http = require("socket.http")
+local ltn12 = require("ltn12")
 local launcherConnected = false
 local isConnecting = false
+local proxyPort = ""
 local launcherVersion = "" -- used only for the server list
-local modVersion = "4.11.0" -- the mod version
+local modVersion = "4.13.13" -- the mod version
 -- server
 
 local serverList -- server list JSON
@@ -31,6 +34,7 @@ local status = "" -- "", "waitingForResources", "LoadingResources", "LoadingMap"
 -- auth
 
 local loggedIn = false
+local authResult = {}
 
 -- event functions
 
@@ -85,6 +89,8 @@ local function send(s)
 			log('W', 'send', 'Lost launcher connection!')
 			if launcherConnected then guihooks.trigger('LauncherConnectionLost') end
 			launcherConnected = false
+			authResult = {}
+			guihooks.trigger("authReceived", authResult)
 		elseif error == "Socket is not connected" then
 
 		else
@@ -147,19 +153,27 @@ local function receiveLauncherHeartbeat() -- TODO: add some purpose to this func
 end
 -- AA============= LAUNCHER RELATED =============AA
 
-
+--- Request the launcher opens the url in the users web browser
+-- @usage `MPCoreNetwork.openURL("<url>")`
+local function openURL(url)
+	send("O"..url)
+	log('M', 'openURL', 'Requesting the BeamMP Launcher to open url: '..url)
+	-- Remove this when the url opening is in the public launcher release
+	guihooks.trigger('ConfirmationDialogOpen', "Link opened", "Please open  "..url.." in your browser if nothing happens.", "OK", "guihooks.trigger('ConfirmationDialogClose', 'Link opened')")
+end
 
 -- ================ UI ================
 --- Called from multiplayer.js UI
 -- Returns the version of the launcher.
 -- @return string version The version of the launcher.
 local function getLauncherVersion()
-	return "2.0" --launcherVersion
+	return launcherVersion
 end
 
 --- Returns true or false if the user is logged in.
 -- @return boolean loggedIn True if the user is logged in, false otherwise.
 local function isLoggedIn()
+	guihooks.trigger('actuallyLoggedIn', loggedIn)
 	return loggedIn
 end
 
@@ -183,12 +197,20 @@ local function autoLogin()
 	send('Nc')
 end
 
+--- Gets the current login data.
+-- @usage getLoginState() -- Triggers a return of the login data
+local function getLoginState()
+	guihooks.trigger("authReceived", authResult)
+end
+
 --- Tells the launcher to log out the user.
 -- @usage logout() -- Tells the launcher to logout from BeamMP Services
 local function logout()
 	log('M', 'logout', 'Attempting logout')
 	send('N:LO')
 	loggedIn = false
+	authResult = {}
+	guihooks.trigger("authReceived", authResult)
 end
 
 --- Sends the current player and server count plus the mod and launcher version to the CEF UI.
@@ -215,7 +237,7 @@ end
 -- @usage MPCoreNetwork.requestServerList()
 local function requestServerList()
 	if not launcherConnected then return end
-	if isMpSession then
+	if isMpSession and not settings.getValue("refreshIngame") then
 		log('W', 'requestServerList', 'Currently in MP Session! Using cached server list.') --TODO: add UI warning when cached server list is being displayed
 		sendBeamMPInfo()
 		return
@@ -256,8 +278,9 @@ end
 -- @param ip string The IP/URL of the server
 -- @param port number The Port of the server
 -- @param name string The Name of the server (Used at the top of the screen when in session)
--- @usage MPCoreNetwork.setCurrentServer('localhost', 30814, 'Test Server')
-local function setCurrentServer(ip, port, name)
+-- @param skipModWarning boolean If the mod security warning should be skipped
+-- @usage MPCoreNetwork.setCurrentServer('localhost', 30814, 'Test Server', false)
+local function setCurrentServer(ip, port, name, skipModWarning)
 	-- If the server is different then lets also clear the existing chat data as this does not always done on leaving
 	if currentServer ~= nil then
 		if currentServer.port ~= port and currentServer.ip ~= ip then
@@ -269,9 +292,10 @@ local function setCurrentServer(ip, port, name)
 		be:executeJS('localStorage.removeItem("chatMessages");')
 	end
 	currentServer = {
-		ip		   = ip,
-		port	   = port,
-		name	   = name
+		ip             = ip,
+		port	       = port,
+		name	       = name,
+		skipModWarning = skipModWarning or false
 	}
 end
 
@@ -279,13 +303,14 @@ end
 -- @param ip string The IP/URL of the server
 -- @param port number The Port of the server
 -- @param name string The Name of the server (Used at the top of the screen when in session)
--- @usage MPCoreNetwork.connectToServer('localhost', 30814, 'Test Server')
-local function connectToServer(ip, port, name)
+-- @param skipModWarning boolean If the mod security warning should be skipped
+-- @usage MPCoreNetwork.connectToServer('localhost', 30814, 'Test Server', false)
+local function connectToServer(ip, port, name, skipModWarning)
 	if isMpSession then log('W', 'connectToServer', 'Already in an MP Session! Leaving server!') M.leaveServer() end
 
 	if ip and port then -- Direct connect
 		currentServer = nil
-		setCurrentServer(ip, port, name)
+		setCurrentServer(ip, port, name, skipModWarning)
 	else
 		log('E', 'connectToServer', 'IP and PORT are required for connecting to a server.')
 		return
@@ -365,6 +390,18 @@ end
 
 -- VV============= OTHERS =============VV
 
+--- Handles the storing of the port received from the launcher that is where the http proxy is located on.
+-- @param port number the port number received from the launcher.
+local function setProxyPort(port)
+	log('M', 'setProxyPort', 'HTTP Proxy Port Received: ' .. port)
+	proxyPort = port
+end
+
+--- Handles the returning of the port received from the launcher that is where the http proxy is located on.
+local function getProxyPort()
+	return proxyPort
+end
+
 --- Handles the login result received from the launcher.
 -- @param params string The JSON-encoded login results.
 local function loginReceived(params)
@@ -379,8 +416,45 @@ local function loginReceived(params)
 		loggedIn = false
 		guihooks.trigger('LoginError', result.message or '')
 	end
+
+	authResult = result
+	if authResult.username then
+		local res = {}; 
+		local r, code, headers = http.request{
+			url = "http://localhost:".. proxyPort .."/avatar/"..authResult.username, 
+			sink = ltn12.sink.table(res)
+		}; 
+
+		if code == 200 then 
+			authResult.avatar = "data:" .. (headers["content-type"]) .. ";base64," .. MPHelpers.b64encode(table.concat(res))
+		end
+
+		if authResult.role and authResult.role ~= "USER" then
+			local roleColor = MPVehicleGE.getRoleInfoTable()[authResult.role].backcolor
+			authResult.color = "rgba(" .. roleColor.r .. "," .. roleColor.g .. "," .. roleColor.b .. "," .. (roleColor.a or 127)/255 .. ")"
+		end
+	end
+
+	guihooks.trigger('authReceived', authResult)
 end
 
+-- Enable making a http request on demand
+local function makeRequest (e, p, r)
+	local res = {}; 
+	local _, code, headers = http.request{
+		url = "http://localhost:".. proxyPort .."/"..e.."/"..p, 
+		sink = ltn12.sink.table(res)
+	}; 
+	local ret = {}
+	ret["code"] = code
+	ret["body"] = res
+	guihooks.trigger(r, ret)
+end
+
+--- Returns the result from authentication, which includes the user's name, beammp id and role
+local function getAuthResult()
+	return authResult
+end
 
 --- Leaves the server and performs necessary cleanup.
 -- @param goBack boolean Whether to go back to the previous screen after leaving the server.
@@ -484,6 +558,14 @@ local function promptAutoJoin(params)
 	UI.promptAutoJoinConfirmation(params)
 end
 
+local function handleModWarning(params)
+	if params == 'MODS_FOUND' and settings.getValue("skipModSecurityWarning", false) == false and not currentServer.skipModWarning then
+		guihooks.trigger('DownloadSecurityPrompt', params) 
+	else 
+		send('WY') 
+	end
+end
+
 -- VV============= EVENTS =============VV
 
 --- Handle network message events.
@@ -497,8 +579,9 @@ local HandleNetwork = {
 	['L'] = function(params) setMods(params) status = "LoadingResources" end, --received after sending 'C' packet
 	['M'] = function(params) log('W', 'HandleNetwork', 'Received Map! '..params) loadLevel(params) end,
 	['N'] = function(params) loginReceived(params) end,
+	['P'] = function(params) setProxyPort(params) end,
 	['U'] = function(params) handleU(params) end, -- Loading into server UI, handles loading mods, pre-join kick messages and ping
-	['W'] = function(params) if params == 'MODS_FOUND' and settings.getValue("skipModSecurityWarning", false) == false then guihooks.trigger('DownloadSecurityPrompt', params) else send('WY') end end,
+	['W'] = function(params) handleModWarning(params) end,
 	['Z'] = function(params) launcherVersion = params; end,
 }
 
@@ -586,9 +669,11 @@ end
 --- onLauncherConnected is an event which is called by internal scripts. This one is called when connection to the launcher is established
 --- @usage INTERNAL ONLY / GAME SPECIFIC
 onLauncherConnected = function()
+	loggedIn = false
 	reconnectAttempt = 0
 	log('W', 'onLauncherConnected', 'onLauncherConnected')
 	send('Z') -- request launcher version
+	send('P') -- request launcher proxy port
 	requestServerList()
 	extensions.hook('onLauncherConnected')
 	guihooks.trigger('onLauncherConnected')
@@ -612,7 +697,7 @@ runPostJoin = function() -- gets called once loaded into a map
 		MPGameNetwork.connectToLauncher()
 		log('W', 'runPostJoin', 'isGoingMpSession = false')
 		isGoingMpSession = false
-		--core_gamestate.setGameState('multiplayer', 'multiplayer', 'multiplayer')
+		core_gamestate.setGameState('multiplayer', 'multiplayer', 'multiplayer')
 		status = "Playing"
 		guihooks.trigger('onServerJoined')
 		if mp_core then
@@ -687,14 +772,17 @@ M.connectToLauncher    = connectToLauncher
 M.disconnectLauncher   = disconnectLauncher
 M.isLauncherConnected  = isLauncherConnected
 M.getLauncherVersion   = getLauncherVersion
+M.getProxyPort         = getProxyPort
 -- security
 M.rejectModDownload    = rejectModDownload
 M.approveModDownload   = approveModDownload
 -- auth
 M.login                = login
 M.autoLogin            = autoLogin
+M.getLoginState        = getLoginState
 M.logout               = logout
 M.isLoggedIn           = isLoggedIn
+M.getAuthResult        = getAuthResult
 -- events
 M.onUiChangedState     = onUiChangedState
 M.onExtensionLoaded    = onExtensionLoaded
@@ -702,6 +790,8 @@ M.onUpdate             = onUpdate
 M.onClientEndMission   = onClientEndMission
 M.onClientStartMission = onClientStartMission
 -- UI
+M.openURL              = openURL
+M.makeRequest          = makeRequest
 M.sendBeamMPInfo       = sendBeamMPInfo
 M.requestPlayers       = requestPlayers
 M.requestServerList    = requestServerList

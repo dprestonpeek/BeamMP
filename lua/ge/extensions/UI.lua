@@ -153,8 +153,18 @@ end
 --- This function is used to update the edit/spawn queue values for the UI indicator.
 -- @param spawnCount number
 -- @param editCount number
-local function updateQueue( spawnCount, editCount)
-	UIqueue = {spawnCount = spawnCount, editCount = editCount}
+-- @param queuedPlayers table
+local function updateQueue( spawnCount, editCount, queuedPlayers)
+	local queuedPlayersJS = {}
+	if (not tableIsEmpty(queuedPlayers)) then
+		for key, value in pairs(queuedPlayers) do
+			queuedPlayersJS[tostring(key)] = value
+		end
+	else
+		queuedPlayersJS = nil
+	end
+
+	UIqueue = {spawnCount = spawnCount, editCount = editCount, queuedPlayers = queuedPlayersJS}
 	UIqueue.show = spawnCount+editCount > 0
 	sendQueue()
 end
@@ -195,18 +205,12 @@ end
 
 --- Display a prompt in the top corner as a notification, Good for server related events like joins/leaves
 -- @param text string
--- @param type string
-local function showNotification(text, type)
-	if type and type == "error" then
-		log('I', 'showNotification', "[UI Error] > "..tostring(text))
-	else
-		log('I', 'showNotification', "[Message] > "..tostring(text))
-		local leftName = string.match(text, "^(.+) left the server!$")
-		if leftName then MPVehicleGE.onPlayerLeft(leftName) end
-		--local joinedName = string.match(text, "^Welcome (.+)!$")
-		--if joinedName then MPVehicleGE.onPlayerJoined(joinedName) end
-	end
-	ui_message(''..text, 10, nil, nil)
+-- @param category string 
+-- @param icon string material_ icons from ui\assets\Sprites\svg-symbols.svg example: smoking_rooms
+local function showNotification(text, category, icon)
+	log('I', 'showNotification', "[Message] > "..tostring(text))
+	
+	ui_message(''..text, 10, category or text, icon)
 end
 --- Show a UI dialog / alert box to inform the user of something.
 -- @param options any

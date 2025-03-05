@@ -21,6 +21,14 @@
 </md-list-item>
 -->
 
+<md-list-item md-no-ink>
+  <p><span class="mp-setting-highlight">{{:: 'ui.options.multiplayer.experimental' | translate }}</span> {{:: 'ui.options.multiplayer.protectConfigFromClone' |
+    translate }}</p>
+  <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.protectConfigFromClone.tooltip' | translate }}
+  </md-tooltip>
+  <md-checkbox ng-model="options.data.values.protectConfigFromClone" ng-change="options.applyState()"></md-checkbox>
+</md-list-item>
+
 <md-list-item md-no-ink ng-show="options.data.values.showAdvancedMPOptions">
   <p><span class="mp-setting-highlight">{{:: 'ui.options.multiplayer.experimental' | translate }}</span> {{:: 'ui.options.multiplayer.disableInstabilityPausing' |
     translate }}</p>
@@ -68,6 +76,21 @@
 
 <div class="mp-setting-border" ng-show="options.data.values.enableSpawnQueue">
   <md-list-item md-no-ink>
+    <p>{{:: 'ui.options.multiplayer.highlightQueuedPlayers' | translate }}</p>
+    <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.highlightQueuedPlayers.tooltip' | translate }}</md-tooltip>
+    <md-checkbox ng-model="options.data.values.highlightQueuedPlayers" ng-change="options.applyState()"></md-checkbox>
+  </md-list-item>
+
+  <md-list-item md-no-ink>
+    <p>{{:: 'ui.options.multiplayer.queueWithLMB' | translate}}</p>
+    <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.queueWithLMB.tooltip' | translate }}</md-tooltip>
+    <md-select aria-label="_" ng-model="options.data.values.queueWithLMB" ng-change="options.applyState()">
+      <md-option ng-value="true">{{:: 'ui.options.multiplayer.leftMouseButton' | translate }}</md-option>
+      <md-option ng-value="false">{{:: 'ui.options.multiplayer.rightMouseButton' | translate }}</md-option>
+    </md-select>
+  </md-list-item>
+
+  <md-list-item md-no-ink>
     <p>{{:: 'ui.options.multiplayer.queueAuto' | translate }}</p>
     <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.queueAuto.tooltip' | translate }}</md-tooltip>
     <md-checkbox ng-model="options.data.values.enableQueueAuto" ng-change="options.applyState()"></md-checkbox>
@@ -75,7 +98,7 @@
 
   <md-list-item md-no-ink>
     <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.queueApplySpeed.tooltip' | translate }}</md-tooltip>
-    <p flex="50"><span class="mp-setting-highlight">{{:: 'ui.options.multiplayer.new' | translate }}</span> {{:: 'ui.options.multiplayer.queueApplySpeed' | translate }}</p>
+    <p flex="50">{{:: 'ui.options.multiplayer.queueApplySpeed' | translate }}</p>
     <md-slider flex ng-model="options.data.values.queueApplySpeed" min="0" max="10" step="1" aria-label="_"
       ng-change="options.applyState()">
     </md-slider>
@@ -89,7 +112,7 @@
 
   <md-list-item md-no-ink>
     <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.queueApplyTimeout.tooltip' | translate }}</md-tooltip>
-    <p flex="50"><span class="mp-setting-highlight">{{:: 'ui.options.multiplayer.new' | translate }}</span> {{:: 'ui.options.multiplayer.queueApplyTimeout' | translate }}</p>
+    <p flex="50">{{:: 'ui.options.multiplayer.queueApplyTimeout' | translate }}</p>
     <md-slider flex ng-model="options.data.values.queueApplyTimeout" min="0" max="20" step="1" aria-label="_"
       ng-change="options.applyState()">
     </md-slider>
@@ -126,6 +149,18 @@
   <p>{{:: 'ui.options.multiplayer.fadeVehicles' | translate }}</p>
   <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.fadeVehicles.tooltip' | translate }}</md-tooltip>
   <md-checkbox ng-model="options.data.values.fadeVehicles" ng-change="options.applyState()"></md-checkbox>
+</md-list-item>
+
+<md-list-item md-no-ink ng-show="options.data.values.showAdvancedMPOptions">
+  <p>{{:: 'ui.options.multiplayer.showPlayerIDs' | translate }}</p>
+  <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.showPlayerIDs.tooltip' | translate }}</md-tooltip>
+  <md-checkbox ng-model="options.data.values.showPlayerIDs" ng-change="options.applyState()"></md-checkbox>
+</md-list-item>
+
+<md-list-item md-no-ink>
+  <p>{{:: 'ui.options.multiplayer.refreshIngame' | translate }}</p>
+  <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.refreshIngame.tooltip' | translate }}</md-tooltip>
+  <md-checkbox ng-model="options.data.values.refreshIngame" ng-change="options.applyState()"></md-checkbox>
 </md-list-item>
 
 <md-divider></md-divider>
@@ -235,14 +270,14 @@
   <md-list-item layout class="md-padding" style="padding-top:0; padding-bottom:0">
     <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.nametagFadeDistance.tooltip' | translate }}
     </md-tooltip>
-    <p flex="30">{{:: 'ui.options.multiplayer.nametagFadeDistance' | translate }}</p>
+    <p flex="30">{{:: 'ui.options.multiplayer.nametagFadeDistance' | translate }} ({{:: 'ui.unit.m' | translate }})</p>
     <md-slider flex ng-model="options.data.values.nameTagFadeDistance" min="0" max="1500" step="1" aria-label="_"
       ng-change="options.applyState()">
     </md-slider>
-    <span ng-if="options.data.values.uiUnitLength == 'imperial'" style="margin-left:15px">{{
-      (options.data.values.nameTagFadeDistance*3.281).toFixed(0) }} feet</span>
-    <span ng-if="options.data.values.uiUnitLength != 'imperial'" style="margin-left:15px">{{
-      (options.data.values.nameTagFadeDistance).toFixed(0) }} {{:: 'ui.unit.m' | translate }}</span>
+    <span style="margin-left:15px">
+      <input flex type="number" min="0" step="1" ng-value="options.data.values.nameTagFadeDistance" ng-model="options.data.values.nameTagFadeDistance" ng-change="options.applyState()" style="width:60px">
+      ({{(options.data.values.nameTagFadeDistance*3.28084).toFixed(0) }} feet)
+    </span>
   </md-list-item>
   <md-list-item md-no-ink>
     <p>{{:: 'ui.options.multiplayer.nametagInvertFade' | translate }}</p>
@@ -274,7 +309,7 @@
 </div>
 
 <md-list-item md-no-ink>
-  <p><span class="mp-setting-highlight">{{:: 'ui.options.multiplayer.new' | translate }}</span> {{:: 'ui.options.multiplayer.showSpectators' | translate }}</p>
+  <p>{{:: 'ui.options.multiplayer.showSpectators' | translate }}</p>
   <md-tooltip md-direction="right">{{:: 'ui.options.multiplayer.showSpectators.tooltip' | translate }}</md-tooltip>
   <md-checkbox ng-model="options.data.values.showSpectators" ng-change="options.applyState()"></md-checkbox>
 </md-list-item>

@@ -39,5 +39,8 @@
   "enablePosSmoother"           : [ "cloud", false ],
   "showPlayerIDs"               : [ "cloud", false ],
   "protectConfigFromClone"      : [ "cloud", false ],
-  "skipModSecurityWarning"      : [ "local", false ]
+  "skipModSecurityWarning"      : [ "local", false ],
+  "highlightQueuedPlayers"      : [ "local", true  ],
+  "queueWithLMB"                : [ "cloud", true  ],
+  "refreshIngame"               : [ "local", false ]
 }

@@ -4,7 +4,7 @@
 
 local ver = split(beamng_versionb, ".")
 local majorVer = tonumber(ver[2])
-local compatibleVersion = 32
+local compatibleVersion = 34
 if majorVer ~= compatibleVersion then
 	log('W', 'versionCheck', 'BeamMP is incompatible with BeamNG.drive version '..beamng_versionb)
 	log('M', 'versionCheck', 'Deactivating BeamMP mod.')
@@ -63,6 +63,9 @@ setExtensionUnloadMode("MPUpdatesGE", "manual")
 
 load("nodesGE")
 setExtensionUnloadMode("nodesGE", "manual")
+
+load("MPControllerGE")
+setExtensionUnloadMode("MPControllerGE", "manual")
 
 -- load this file last so it can reference the others
 load("MPHelpers")
